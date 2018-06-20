@@ -1,0 +1,51 @@
+.list-issues {
+  display: table;
+  width: 100%;
+}
+
+.issue-item {
+  display: table-row;
+}
+
+.issue-item-number,
+.issue-item-state,
+.issue-item-labels,
+.issue-item-comments {
+  display: table-cell;
+  white-space: nowrap;
+}
+
+.issue-item-state,
+.issue-item-state {
+  padding: 0 $half-gutter;
+}
+
+.issue-item-number {
+  padding: 0 4px;
+}
+
+.issue-item-title {
+  display: table-cell;
+  width: 99%;
+}
+
+.issues-refresh {
+  @extend .btn-embed;
+  position: absolute;
+  top: 40px;
+  right: 12px;
+}
+
+.issue-milestone-button {
+  @extend .btn-embed;
+}
+
+.dashlet-issues {
+  display: flex;
+  flex-direction: column;
+}
+
+.list-issues-container {
+  height: 100%;
+  overflow-y: auto;
+}
