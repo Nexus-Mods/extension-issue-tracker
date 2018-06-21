@@ -12,13 +12,24 @@ import { translate } from 'react-i18next';
 import { connect } from 'react-redux';
 import * as Redux from 'redux';
 import * as url from 'url';
-import { ComponentEx, Dashlet, Icon, log, Spinner, tooltip } from 'vortex-api';
+import { ComponentEx, Dashlet, log, Spinner, tooltip, types } from 'vortex-api';
 import * as va from 'vortex-api';
 import { Button } from 'react-bootstrap';
 
 const { EmptyPlaceholder } = va as any;
 
 const UPDATE_FREQUENCY = 24 * 60 * 60 * 1000;
+
+function queryIssues(api: types.IExtensionApi): Promise<IIssue[]> {
+  return new Promise((resolve, reject) => {
+    api.events.emit('request-own-issues', (err: Error, issues: IIssue[]) => {
+      if (err !== null) {
+        return reject(err);
+      }
+      resolve(issues);
+    });
+  });
+}
 
 interface IConnectedProps {
   issues: { [id: string]: IGithubIssueCache };
@@ -265,7 +276,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
   private updateIssues(force: boolean) {
     const { issues, onSetUpdateDetails, onUpdateIssueList } = this.props;
     this.nextState.updating = true;
-    (this.context.api as any).invoke('request-own-issues')
+    queryIssues(this.context.api)
       .then((res: Array<{ issue_number: number }>) => {
         onUpdateIssueList(res.map(issue => issue.issue_number.toString()));
         const now = Date.now();
