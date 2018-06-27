@@ -1,4 +1,4 @@
-import { updateIssueList, setUpdateDetails } from './actions';
+import { setUpdateDetails, updateIssueList } from './actions';
 import { IGithubIssue, IGithubIssueCache } from './IGithubIssue';
 
 import * as Promise from 'bluebird';
@@ -7,6 +7,7 @@ import { get } from 'https';
 import { IIssue } from 'nexus-api';
 import opn = require('opn');
 import * as React from 'react';
+import { Button } from 'react-bootstrap';
 import * as ReactDOM from 'react-dom';
 import { translate } from 'react-i18next';
 import { connect } from 'react-redux';
@@ -14,7 +15,6 @@ import * as Redux from 'redux';
 import * as url from 'url';
 import { ComponentEx, Dashlet, log, Spinner, tooltip, types } from 'vortex-api';
 import * as va from 'vortex-api';
-import { Button } from 'react-bootstrap';
 
 const { EmptyPlaceholder } = va as any;
 
@@ -52,7 +52,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
 
     this.initState({
       updating: false,
-    })
+    });
   }
 
   public componentWillMount() {
@@ -136,7 +136,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
           replace: {
             title: issue.milestone.title,
             state,
-          }
+          },
         })}
       />
     );
@@ -203,9 +203,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
   }
 
   private issueURL(issueId: string): string {
-    const res = `https://api.github.com/repos/vortex-reporter/test-proj/issues/${issueId}`;
-    console.log('url', res);
-    return res;
+    return `https://api.github.com/repos/vortex-reporter/test-proj/issues/${issueId}`;
   }
 
   private requestIssue(issueId: string): Promise<IGithubIssue> {
@@ -297,7 +295,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
       })
       .catch(err => {
         // probably a network error, but this isn't really a big deal
-        log('warn', 'Failed to get list of issues' ,err);
+        log('warn', 'Failed to get list of issues', err);
       })
       .finally(() => {
         this.nextState.updating = false;
@@ -311,7 +309,7 @@ function mapStateToProps(state: any): IConnectedProps {
   };
 }
 
-function mapDispatchToProps(dispatch: Redux.Dispatch<any>): IActionProps {
+function mapDispatchToProps(dispatch: any): IActionProps {
   return {
     onUpdateIssueList: (issueIds: string[]) => dispatch(updateIssueList(issueIds)),
     onSetUpdateDetails: (issueId: string, details: IGithubIssueCache) =>
