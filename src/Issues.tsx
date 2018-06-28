@@ -47,6 +47,7 @@ interface IIssueListState {
 }
 
 class IssueList extends ComponentEx<IProps, IIssueListState> {
+  private static GITHUB_PROJ = 'Nexus-Mods/Vortex';
   constructor(props: IProps) {
     super(props);
 
@@ -192,18 +193,18 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
   private openIssue = (evt: React.MouseEvent<HTMLAnchorElement>) => {
     evt.preventDefault();
     const issueId = evt.currentTarget.getAttribute('data-issue');
-    opn(`https://github.com/vortex-reporter/test-proj/issues/${issueId}`);
+    opn(`https://www.github.com/${IssueList.GITHUB_PROJ}/issues/${issueId}`);
   }
 
   private openMilestone = (evt: React.MouseEvent<Button>) => {
     evt.preventDefault();
     const node: Element = ReactDOM.findDOMNode(evt.currentTarget) as Element;
     const milestoneId = node.getAttribute('data-milestone');
-    opn(`https://github.com/vortex-reporter/test-proj/milestone/${milestoneId}`);
+    opn(`https://www.github.com/${IssueList.GITHUB_PROJ}/milestone/${milestoneId}`);
   }
 
   private issueURL(issueId: string): string {
-    return `https://api.github.com/repos/vortex-reporter/test-proj/issues/${issueId}`;
+    return `https://api.github.com/repos/${IssueList.GITHUB_PROJ}/issues/${issueId}`;
   }
 
   private requestIssue(issueId: string): Promise<IGithubIssue> {
