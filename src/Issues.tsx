@@ -5,15 +5,13 @@ import * as Promise from 'bluebird';
 import { IncomingMessage } from 'http';
 import { get } from 'https';
 import { IIssue } from 'nexus-api';
-import opn = require('opn');
 import * as React from 'react';
 import { Button } from 'react-bootstrap';
 import * as ReactDOM from 'react-dom';
 import { translate } from 'react-i18next';
 import { connect } from 'react-redux';
-import * as Redux from 'redux';
 import * as url from 'url';
-import { ComponentEx, Dashlet, log, Spinner, tooltip, types } from 'vortex-api';
+import { ComponentEx, Dashlet, log, Spinner, tooltip, types, util } from 'vortex-api';
 import * as va from 'vortex-api';
 
 const { EmptyPlaceholder } = va as any;
@@ -193,14 +191,14 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
   private openIssue = (evt: React.MouseEvent<HTMLAnchorElement>) => {
     evt.preventDefault();
     const issueId = evt.currentTarget.getAttribute('data-issue');
-    opn(`https://www.github.com/${IssueList.GITHUB_PROJ}/issues/${issueId}`);
+    (util as any).opn(`https://www.github.com/${IssueList.GITHUB_PROJ}/issues/${issueId}`);
   }
 
   private openMilestone = (evt: React.MouseEvent<Button>) => {
     evt.preventDefault();
     const node: Element = ReactDOM.findDOMNode(evt.currentTarget) as Element;
     const milestoneId = node.getAttribute('data-milestone');
-    opn(`https://www.github.com/${IssueList.GITHUB_PROJ}/milestone/${milestoneId}`);
+    (util as any).opn(`https://www.github.com/${IssueList.GITHUB_PROJ}/milestone/${milestoneId}`);
   }
 
   private issueURL(issueId: string): string {
