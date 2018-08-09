@@ -1,5 +1,5 @@
 import { setUpdateDetails, updateIssueList } from './actions';
-import { IGithubIssue, IGithubIssueCache } from './IGithubIssue';
+import { IGithubIssue, IGithubIssueCache, IGithubComment } from './IGithubIssue';
 
 import * as Promise from 'bluebird';
 import { IncomingMessage } from 'http';
@@ -46,6 +46,9 @@ interface IIssueListState {
 
 class IssueList extends ComponentEx<IProps, IIssueListState> {
   private static GITHUB_PROJ = 'Nexus-Mods/Vortex';
+  private static DUPLICATE_EXP = /[ ]*duplicate of #([0-9]+)[ ]*/;
+  // hide closed issues without any update after a month
+  private static HIDE_AFTER = 30 * 24 * 60 * 60 * 1000;
   constructor(props: IProps) {
     super(props);
 
@@ -181,9 +184,18 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
       return this.renderNoIssues();
     }
 
+    const now = Date.now();
+
+    const sorted = Object.keys(issues)
+      .filter(id => (issues[id].state !== 'closed')
+                 || (now - issues[id].closedTime < IssueList.HIDE_AFTER)
+                 || (now - issues[id].lastUpdated < IssueList.HIDE_AFTER))
+      .sort((lhs, rhs) => issues[rhs].lastUpdated - issues[lhs].lastUpdated)
+      .map(id => this.renderIssue(issues[id]));
+
     return (
       <div className='list-issues'>
-        {Object.keys(issues).map(id => this.renderIssue(issues[id]))}
+        {sorted}
       </div>
     );
   }
@@ -205,10 +217,10 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
     return `https://api.github.com/repos/${IssueList.GITHUB_PROJ}/issues/${issueId}`;
   }
 
-  private requestIssue(issueId: string): Promise<IGithubIssue> {
+  private requestFromApi(apiURL: string): Promise<any> {
     return new Promise((resolve, reject) => {
       get({
-        ...url.parse(this.issueURL(issueId)),
+        ...url.parse(apiURL),
         headers: { 'User-Agent': 'Vortex' },
       } as any, (res: IncomingMessage) => {
         const { statusCode } = res;
@@ -243,18 +255,43 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
     });
   }
 
+  private requestIssue(issueId: string): Promise<IGithubIssue> {
+    return this.requestFromApi(this.issueURL(issueId))
+    .then((issue: IGithubIssue) =>
+      // if the issue is labeled a duplicate, show the referenced issue
+      // instead
+      (issue.labels.find(label => label.name === 'duplicate') !== undefined)
+        ? this.followDuplicate(issue)
+        : issue);
+  }
+
+  private followDuplicate(issue: IGithubIssue): Promise<IGithubIssue> {
+    return this.requestFromApi(issue.comments_url)
+      .then((comments: IGithubComment[]) => {
+        const redir = comments.reverse().find(comment => IssueList.DUPLICATE_EXP.test(comment.body));
+        if (redir === undefined) {
+          // if there is no comment saying what this is a duplicate of, show the original issue after all
+          return issue;
+        } else {
+          // extract the referenced id and return that issue
+          const refId = IssueList.DUPLICATE_EXP.exec(redir.body)[1];
+          return this.requestIssue(refId);
+        }
+      });
+  }
+
   private cache(input: IGithubIssue): IGithubIssueCache {
     return {
       number: input.number,
-      closedTime: input.closed_at,
-      createdTime: input.created_at,
+      closedTime: Date.parse(input.closed_at),
+      createdTime: Date.parse(input.created_at),
       comments: input.comments,
       labels: input.labels.map(label => label.name),
       state: input.state,
       title: input.title,
       body: input.body,
       user: input.user !== undefined ? input.user.login : undefined,
-      lastUpdated: Date.now(),
+      lastUpdated: Date.parse(input.updated_at),
       milestone: input.milestone !== null ? {
         number: input.milestone.number,
         title: input.milestone.title,

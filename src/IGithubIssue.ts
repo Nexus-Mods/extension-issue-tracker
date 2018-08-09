@@ -82,14 +82,27 @@ export interface IGithubIssue {
   closed_by: IGithubUser;
 }
 
+export interface IGithubComment {
+  url: string;
+  html_url: string;
+  issue_url: string;
+  id: number;
+  node_id: string;
+  user: IGithubUser;	
+  created_at: string;
+  updated_at: string;
+  author_association: string;
+  body: string;
+}
+
 export interface IGithubIssueCache {
   number: number;
   title: string;
   state: IGithubIssueState;
   user: string;
   body: string;
-  createdTime: string;
-  closedTime: string;
+  createdTime: number;
+  closedTime: number;
   comments: number;
   labels: string[];
   lastUpdated: number;
