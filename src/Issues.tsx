@@ -94,11 +94,15 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
     );
   }
 
+  private isFeedbackRequiredLabel(label: string): boolean {
+    return (['help wanted', 'waiting for reply'].indexOf(label) !== -1);
+  }
+
   private renderLabel(label: string): JSX.Element {
     const { t } = this.props;
     if (label === 'bug') {
       return <tooltip.Icon key='bug' name='bug' tooltip={t('Bug')} />;
-    } else if (label === 'help wanted') {
+    } else if (this.isFeedbackRequiredLabel(label)) {
       return (
         <tooltip.Icon
           key='help wanted'
@@ -149,6 +153,10 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
     if (issue.number === undefined) {
       return null;
     }
+
+    // Find all labels that require feedback from the reporter/user
+    const feedbackRequiredLabels = issue.labels.filter(label => this.isFeedbackRequiredLabel(label));
+    
     return (
       <div key={issue.number.toString()} className='issue-item'>
         <div className='issue-item-number'>{`#${issue.number}`}</div>
@@ -157,7 +165,8 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
           {this.renderMilestone(issue)}
         </div>
         <div className='issue-item-labels'>
-          {issue.labels.map(label => this.renderLabel(label))}
+          {issue.labels.map(label => this.isFeedbackRequiredLabel(label) ? null : this.renderLabel(label))}
+          {feedbackRequiredLabels.length > 0 ? this.renderLabel(feedbackRequiredLabels[0]) : null}
         </div>
         <div className='issue-item-title'>
           <a
