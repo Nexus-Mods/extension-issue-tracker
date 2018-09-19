@@ -43,6 +43,10 @@
 .dashlet-issues {
   display: flex;
   flex-direction: column;
+
+  .placeholder {
+    padding: 0;
+  }
 }
 
 .list-issues-container {
