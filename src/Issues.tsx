@@ -49,6 +49,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
   private static DUPLICATE_EXP = /[ ]*duplicate of #([0-9]+)[ ]*/;
   // hide closed issues without any update after a month
   private static HIDE_AFTER = 30 * 24 * 60 * 60 * 1000;
+  private mMounted: boolean = false;
   constructor(props: IProps) {
     super(props);
 
@@ -59,6 +60,14 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
 
   public componentWillMount() {
     this.updateIssues(false);
+  }
+  
+  public componentDidMount() {
+    this.mMounted = true;
+  }
+
+  public componentWillUnmount() {
+    this.mMounted = false;
   }
 
   public render(): JSX.Element {
@@ -318,7 +327,9 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
 
   private updateIssues(force: boolean) {
     const { issues, onSetUpdateDetails, onUpdateIssueList } = this.props;
-    this.nextState.updating = true;
+    if (this.mMounted) {
+      this.nextState.updating = true;
+    }
     queryIssues(this.context.api)
       .then((res: Array<{ issue_number: number }>) => {
         onUpdateIssueList(res.map(issue => issue.issue_number.toString()));
@@ -343,7 +354,9 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
         log('warn', 'Failed to get list of issues', err);
       })
       .finally(() => {
-        this.nextState.updating = false;
+        if (this.mMounted) {
+          this.nextState.updating = false;
+        }
       });
   }
 }
