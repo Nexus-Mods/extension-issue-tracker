@@ -198,9 +198,6 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
     if (updating) {
       return this.renderPleaseWait();
     }
-    if (Object.keys(issues).length === 0) {
-      return this.renderNoIssues();
-    }
 
     const now = Date.now();
 
@@ -209,11 +206,14 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
                  || (now - issues[id].closedTime < IssueList.HIDE_AFTER)
                  || (now - issues[id].lastUpdated < IssueList.HIDE_AFTER))
       .sort((lhs, rhs) => issues[rhs].lastUpdated - issues[lhs].lastUpdated)
-      .map(id => this.renderIssue(issues[id]));
+
+    if (Object.keys(sorted).length === 0) {
+      return this.renderNoIssues();
+    }
 
     return (
       <div className='list-issues'>
-        {sorted}
+        {sorted.map(id => this.renderIssue(issues[id]))}
       </div>
     );
   }
