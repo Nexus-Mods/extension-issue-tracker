@@ -1,5 +1,5 @@
 import { setUpdateDetails, updateIssueList } from './actions';
-import { IGithubIssue, IGithubIssueCache, IGithubComment } from './IGithubIssue';
+import { IGithubComment, IGithubIssue, IGithubIssueCache } from './IGithubIssue';
 
 import * as Promise from 'bluebird';
 import { IncomingMessage } from 'http';
@@ -49,7 +49,11 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
   private static DUPLICATE_EXP = /[ ]*duplicate of #([0-9]+)[ ]*/;
   // hide closed issues without any update after a month
   private static HIDE_AFTER = 30 * 24 * 60 * 60 * 1000;
+  // allow refresh once every minute. This is mostly to prevent people from spamming the button
+  private static MIN_REFRESH_DELAY = 60 * 1000;
   private mMounted: boolean = false;
+  private mLastRefresh: number = 0;
+
   constructor(props: IProps) {
     super(props);
 
@@ -61,7 +65,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
   public componentWillMount() {
     this.updateIssues(false);
   }
-  
+
   public componentDidMount() {
     this.mMounted = true;
   }
@@ -164,8 +168,9 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
     }
 
     // Find all labels that require feedback from the reporter/user
-    const feedbackRequiredLabels = issue.labels.filter(label => this.isFeedbackRequiredLabel(label));
-    
+    const feedbackRequiredLabels =
+      issue.labels.filter(label => this.isFeedbackRequiredLabel(label));
+
     return (
       <div key={issue.number.toString()} className='issue-item'>
         <div className='issue-item-number'>{`#${issue.number}`}</div>
@@ -174,7 +179,9 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
           {this.renderMilestone(issue)}
         </div>
         <div className='issue-item-labels'>
-          {issue.labels.map(label => this.isFeedbackRequiredLabel(label) ? null : this.renderLabel(label))}
+          {issue.labels.map(label => this.isFeedbackRequiredLabel(label)
+            ? null
+            : this.renderLabel(label))}
           {feedbackRequiredLabels.length > 0 ? this.renderLabel(feedbackRequiredLabels[0]) : null}
         </div>
         <div className='issue-item-title'>
@@ -205,7 +212,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
       .filter(id => (issues[id].state !== 'closed')
                  || (now - issues[id].closedTime < IssueList.HIDE_AFTER)
                  || (now - issues[id].lastUpdated < IssueList.HIDE_AFTER))
-      .sort((lhs, rhs) => issues[rhs].lastUpdated - issues[lhs].lastUpdated)
+      .sort((lhs, rhs) => issues[rhs].lastUpdated - issues[lhs].lastUpdated);
 
     if (Object.keys(sorted).length === 0) {
       return this.renderNoIssues();
@@ -221,14 +228,16 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
   private openIssue = (evt: React.MouseEvent<HTMLAnchorElement>) => {
     evt.preventDefault();
     const issueId = evt.currentTarget.getAttribute('data-issue');
-    (util as any).opn(`https://www.github.com/${IssueList.GITHUB_PROJ}/issues/${issueId}`).catch(() => null);
+    (util as any).opn(`https://www.github.com/${IssueList.GITHUB_PROJ}/issues/${issueId}`)
+      .catch(() => null);
   }
 
   private openMilestone = (evt: React.MouseEvent<Button>) => {
     evt.preventDefault();
     const node: Element = ReactDOM.findDOMNode(evt.currentTarget) as Element;
     const milestoneId = node.getAttribute('data-milestone');
-    (util as any).opn(`https://www.github.com/${IssueList.GITHUB_PROJ}/milestone/${milestoneId}`).catch(() => null);
+    (util as any).opn(`https://www.github.com/${IssueList.GITHUB_PROJ}/milestone/${milestoneId}`)
+      .catch(() => null);
   }
 
   private issueURL(issueId: string): string {
@@ -286,9 +295,11 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
   private followDuplicate(issue: IGithubIssue): Promise<IGithubIssue> {
     return this.requestFromApi(issue.comments_url)
       .then((comments: IGithubComment[]) => {
-        const redir = comments.reverse().find(comment => IssueList.DUPLICATE_EXP.test(comment.body));
+        const redir = comments.reverse()
+          .find(comment => IssueList.DUPLICATE_EXP.test(comment.body));
         if (redir === undefined) {
-          // if there is no comment saying what this is a duplicate of, show the original issue after all
+          // if there is no comment saying what this is a duplicate of,
+          // show the original issue after all
           return issue;
         } else {
           // extract the referenced id and return that issue
@@ -327,14 +338,18 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
 
   private updateIssues(force: boolean) {
     const { issues, onSetUpdateDetails, onUpdateIssueList } = this.props;
+    if (Date.now() - this.mLastRefresh < IssueList.MIN_REFRESH_DELAY) {
+      return;
+    }
     if (this.mMounted) {
       this.nextState.updating = true;
     }
+    this.mLastRefresh = Date.now();
     queryIssues(this.context.api)
       .then((res: Array<{ issue_number: number }>) => {
         onUpdateIssueList(res.map(issue => issue.issue_number.toString()));
         const now = Date.now();
-        return Promise.map(res.map(issue => issue.issue_number.toString()), issueId => {
+        return Promise.mapSeries(res.map(issue => issue.issue_number.toString()), issueId => {
           if (force
             || (issues[issueId] === undefined)
             || (issues[issueId].lastUpdated === undefined)
@@ -342,12 +357,12 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
             return this.requestIssue(issueId)
               .then(issue => {
                 onSetUpdateDetails(issueId, this.cache(issue));
-              })
-              .catch(err => {
-                log('warn', 'Failed to retrieve github issue', err);
               });
           }
-        });
+        })
+          .catch(err => {
+            log('warn', 'Failed to retrieve github issues', err);
+          });
       })
       .catch(err => {
         // probably a network error, but this isn't really a big deal
