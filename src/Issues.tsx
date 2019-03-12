@@ -314,6 +314,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
       number: input.number,
       closedTime: Date.parse(input.closed_at),
       createdTime: Date.parse(input.created_at),
+      cacheTime: Date.now(),
       comments: input.comments,
       labels: input.labels.map(label => label.name),
       state: input.state,
@@ -351,9 +352,9 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
         const now = Date.now();
         return Promise.mapSeries(res.map(issue => issue.issue_number.toString()), issueId => {
           if (force
-            || (issues[issueId] === undefined)
-            || (issues[issueId].lastUpdated === undefined)
-            || ((now - issues[issueId].lastUpdated) > UPDATE_FREQUENCY)) {
+              || (issues[issueId] === undefined)
+              || (issues[issueId].cacheTime === undefined)
+              || ((now - issues[issueId].cacheTime) > UPDATE_FREQUENCY)) {
             return this.requestIssue(issueId)
               .then(issue => {
                 onSetUpdateDetails(issueId, this.cache(issue));
@@ -392,5 +393,5 @@ function mapDispatchToProps(dispatch: any): IActionProps {
 
 export default
   connect(mapStateToProps, mapDispatchToProps)(
-    translate(['issue-tracker', 'common'], { wait: true })(
+    translate(['issue-tracker', 'common'])(
       IssueList));

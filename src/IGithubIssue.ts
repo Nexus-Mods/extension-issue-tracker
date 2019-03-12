@@ -103,6 +103,7 @@ export interface IGithubIssueCache {
   body: string;
   createdTime: number;
   closedTime: number;
+  cacheTime: number;
   comments: number;
   labels: string[];
   lastUpdated: number;
