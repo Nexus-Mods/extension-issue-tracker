@@ -363,22 +363,19 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
               || ((now - issues[issueId].cacheTime) > UPDATE_FREQUENCY)) {
             return this.requestIssue(issueId)
               .then(issue => {
-                const issId = issue.number.toString();
-                const isInState = issues[issId] !== undefined;
+                const resolvedIssueId = issue.number.toString();
+                const hasBeenNotified = util.getSafe(issues, [issueId, 'notifiedForReply'], false);
                 const replyRequired = issue.labels.find(lbl =>
                   this.isFeedbackRequiredLabel(lbl.name)) !== undefined;
 
-                const notificationNeeded = (isInState)
-                  ? (replyRequired && (!issues[issId].notifiedForReply))
-                  : (replyRequired);
-
+                const notificationNeeded = replyRequired && !hasBeenNotified;
                 if (notificationNeeded) {
                   // tslint:disable-next-line: max-line-length
-                  notificationURLs.push(`https://www.github.com/${IssueList.GITHUB_PROJ}/issues/${issId}`);
+                  notificationURLs.push(`https://www.github.com/${IssueList.GITHUB_PROJ}/issues/${resolvedIssueId}`);
                 }
 
-                const notifiedForReply = (isInState && issues[issId].notifiedForReply)
-                  ? true
+                const notifiedForReply = (hasBeenNotified)
+                  ? hasBeenNotified
                   : notificationNeeded;
 
                 onSetUpdateDetails(issueId, this.cache(issue, notifiedForReply));
