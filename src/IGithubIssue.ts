@@ -88,7 +88,7 @@ export interface IGithubComment {
   issue_url: string;
   id: number;
   node_id: string;
-  user: IGithubUser;	
+  user: IGithubUser;
   created_at: string;
   updated_at: string;
   author_association: string;
@@ -108,4 +108,5 @@ export interface IGithubIssueCache {
   labels: string[];
   lastUpdated: number;
   milestone: IGithubMilestoneCache;
+  notifiedForReply: boolean;
 }

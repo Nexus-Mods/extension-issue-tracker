@@ -11,7 +11,7 @@ import * as ReactDOM from 'react-dom';
 import { translate } from 'react-i18next';
 import { connect } from 'react-redux';
 import * as url from 'url';
-import { ComponentEx, Dashlet, log, Spinner, tooltip, types, util } from 'vortex-api';
+import { actions, ComponentEx, Dashlet, log, Spinner, tooltip, types, util } from 'vortex-api';
 import * as va from 'vortex-api';
 
 const { EmptyPlaceholder } = va as any;
@@ -36,6 +36,9 @@ interface IConnectedProps {
 interface IActionProps {
   onUpdateIssueList: (issueIds: string[]) => void;
   onSetUpdateDetails: (issueId: string, details: IGithubIssueCache) => void;
+  onShowDialog: (type: types.DialogType, title: string, content: types.IDialogContent,
+                 actions: types.DialogActions) => void;
+  onShowInfo: (message: string, dialogAction: types.INotificationAction) => void;
 }
 
 type IProps = IConnectedProps & IActionProps;
@@ -309,7 +312,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
       });
   }
 
-  private cache(input: IGithubIssue): IGithubIssueCache {
+  private cache(input: IGithubIssue, notifiedForReply: boolean): IGithubIssueCache {
     return {
       number: input.number,
       closedTime: Date.parse(input.closed_at),
@@ -330,6 +333,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
         open_issues: input.milestone.open_issues,
         due_on: input.milestone.due_on,
       } : undefined,
+      notifiedForReply,
     };
   }
 
@@ -338,7 +342,8 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
   }
 
   private updateIssues(force: boolean) {
-    const { issues, onSetUpdateDetails, onUpdateIssueList } = this.props;
+    const { t, issues, onSetUpdateDetails,
+            onShowDialog, onShowInfo, onUpdateIssueList } = this.props;
     if (Date.now() - this.mLastRefresh < IssueList.MIN_REFRESH_DELAY) {
       return;
     }
@@ -350,6 +355,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
       .then((res: Array<{ issue_number: number }>) => {
         onUpdateIssueList(res.map(issue => issue.issue_number.toString()));
         const now = Date.now();
+        const notificationURLs: string[] = [];
         return Promise.mapSeries(res.map(issue => issue.issue_number.toString()), issueId => {
           if (force
               || (issues[issueId] === undefined)
@@ -357,13 +363,46 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
               || ((now - issues[issueId].cacheTime) > UPDATE_FREQUENCY)) {
             return this.requestIssue(issueId)
               .then(issue => {
-                onSetUpdateDetails(issueId, this.cache(issue));
+                const issId = issue.number.toString();
+                const isInState = issues[issId] !== undefined;
+                const replyRequired = issue.labels.find(lbl =>
+                  this.isFeedbackRequiredLabel(lbl.name)) !== undefined;
+
+                const notificationNeeded = (isInState)
+                  ? (replyRequired && (!issues[issId].notifiedForReply))
+                  : (replyRequired);
+
+                if (notificationNeeded) {
+                  // tslint:disable-next-line: max-line-length
+                  notificationURLs.push(`https://www.github.com/${IssueList.GITHUB_PROJ}/issues/${issId}`);
+                }
+
+                const notifiedForReply = (isInState && issues[issId].notifiedForReply)
+                  ? true
+                  : notificationNeeded;
+
+                onSetUpdateDetails(issueId, this.cache(issue, notifiedForReply));
+                return Promise.resolve();
               });
           }
         })
-          .catch(err => {
-            log('warn', 'Failed to retrieve github issues', err);
-          });
+        .then(() => {
+          if (notificationURLs.length > 0) {
+            const urlString = '[url]' + notificationURLs.join('[/url]<br />[url]');
+            const showDialog = () => onShowDialog('info', t('You\'ve received feedback response'), {
+              bbcode: t('The Vortex developers require your assistance with a bug/suggestion '
+              + 'which you have submitted. To view our response please click on any of the '
+              + 'below links: <br /><br />'
+              + '{{ urlString }}', { replace: { urlString } }),
+            }, [ { label: 'Close' } ]);
+
+            onShowInfo('You\'ve received feedback response',
+              { title: 'More', action: () => showDialog() });
+          }
+        })
+        .catch(err => {
+          log('warn', 'Failed to retrieve github issues', err);
+        });
       })
       .catch(err => {
         // probably a network error, but this isn't really a big deal
@@ -388,6 +427,14 @@ function mapDispatchToProps(dispatch: any): IActionProps {
     onUpdateIssueList: (issueIds: string[]) => dispatch(updateIssueList(issueIds)),
     onSetUpdateDetails: (issueId: string, details: IGithubIssueCache) =>
       dispatch(setUpdateDetails(issueId, details)),
+    onShowDialog: (type, title, content, dialogActions) =>
+      dispatch(actions.showDialog(type, title, content, dialogActions)),
+    onShowInfo: (message: string, dialogAction: types.INotificationAction) =>
+      dispatch(actions.addNotification({
+        type: 'info',
+        message,
+        actions: [ dialogAction ],
+    })),
   };
 }
 
