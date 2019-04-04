@@ -22,7 +22,7 @@
     "@types/node": "^10.3.4",
     "@types/react-bootstrap": "^0.32.10",
     "@types/react-dom": "^16.0.6",
-    "@types/react-i18next": "^7.6.1",
+    "@types/react-i18next": "^8.1.0",
     "@types/redux": "^3.6.0",
     "@types/redux-thunk": "^2.1.0",
     "babel-core": "^6.26.3",

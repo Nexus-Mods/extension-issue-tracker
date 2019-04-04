@@ -8,7 +8,7 @@ import { IIssue } from 'nexus-api';
 import * as React from 'react';
 import { Button } from 'react-bootstrap';
 import * as ReactDOM from 'react-dom';
-import { translate } from 'react-i18next';
+import { withTranslation } from 'react-i18next';
 import { connect } from 'react-redux';
 import * as url from 'url';
 import { actions, ComponentEx, Dashlet, log, Spinner, tooltip, types, util } from 'vortex-api';
@@ -437,5 +437,5 @@ function mapDispatchToProps(dispatch: any): IActionProps {
 
 export default
   connect(mapStateToProps, mapDispatchToProps)(
-    translate(['issue-tracker', 'common'])(
-      IssueList));
+    withTranslation(['issue-tracker', 'common'])(
+      IssueList as any)) as React.ComponentClass<{}>;
