@@ -49,7 +49,7 @@ interface IIssueListState {
 
 class IssueList extends ComponentEx<IProps, IIssueListState> {
   private static GITHUB_PROJ = 'Nexus-Mods/Vortex';
-  private static DUPLICATE_EXP = /[ ]*duplicate of #([0-9]+)[ ]*/;
+  private static DUPLICATE_EXP = /[ ]*duplicate of #([0-9]+)[ ]*/i;
   // hide closed issues without any update after a month
   private static HIDE_AFTER = 30 * 24 * 60 * 60 * 1000;
   // allow refresh once every minute. This is mostly to prevent people from spamming the button
