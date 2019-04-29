@@ -142,10 +142,16 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
 
     const state = issue.milestone.state === 'closed'
       ? t('Closed')
-      : t('{{completion}}%, planned for {{date}}', {
+      : t('{{completion}}%{{planned}}', {
         replace: {
-          completion: completion * 100,
-          date: new Date(issue.milestone.due_on).toLocaleDateString(this.context.api.locale()),
+          completion: Math.floor(completion * 100),
+          planned: issue.milestone.due_on === null ? '' :
+            t(', planned for {{date}}', {
+              replace: {
+                date: new Date(issue.milestone.due_on)
+                  .toLocaleDateString(this.context.api.locale()),
+              }
+            }),
         } });
 
     return (
