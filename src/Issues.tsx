@@ -150,7 +150,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
               replace: {
                 date: new Date(issue.milestone.due_on)
                   .toLocaleDateString(this.context.api.locale()),
-              }
+              },
             }),
         } });
 
