@@ -1,7 +1,7 @@
 import { setUpdateDetails, updateIssueList } from './actions';
 import { IGithubComment, IGithubIssue, IGithubIssueCache } from './IGithubIssue';
 
-import * as Promise from 'bluebird';
+import Promise from 'bluebird';
 import { IncomingMessage } from 'http';
 import { get } from 'https';
 import { IIssue } from 'nexus-api';
