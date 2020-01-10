@@ -124,7 +124,8 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
           key='help wanted'
           name='attention-required'
           tooltip={t('Feedback required')}
-        />);
+        />
+      );
     } else {
       return null;
     }
@@ -444,4 +445,4 @@ function mapDispatchToProps(dispatch: any): IActionProps {
 export default
   connect(mapStateToProps, mapDispatchToProps)(
     withTranslation(['issue-tracker', 'common'])(
-      IssueList as any)) as React.ComponentClass<{}>;
+      IssueList as any)) as any;
