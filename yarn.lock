@@ -9,6 +9,14 @@
   dependencies:
     regenerator-runtime "^0.13.2"
 
+"@nexusmods/nexus-api@^1.0.5":
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/@nexusmods/nexus-api/-/nexus-api-1.0.5.tgz#a5bd4434d10120d86e2760a5ea60c0e407d055d2"
+  integrity sha512-VRuoJfZt8FNI2whvkHoV8SmEtd4K/qeCMbrabJj82fbTLB6SIL/AKPimsep/2lCIQjYEpKrMteTLAfL6lRVyRw==
+  dependencies:
+    request "^2.85.0"
+    string-template "^1.0.0"
+
 "@types/bluebird@3.5.20":
   version "3.5.20"
   resolved "https://registry.yarnpkg.com/@types/bluebird/-/bluebird-3.5.20.tgz#f6363172add6f4eabb8cada53ca9af2781e8d6a1"
@@ -2180,13 +2188,6 @@ neo-async@^2.5.0, neo-async@^2.6.1:
   version "2.6.1"
   resolved "https://registry.yarnpkg.com/neo-async/-/neo-async-2.6.1.tgz#ac27ada66167fa8849a6addd837f6b189ad2081c"
   integrity sha512-iyam8fBuCUpWeKPGpaNMetEocMt364qkCsfL9JuhjXX6dRnguRVOfk2GZaDpPjcOKiiXCPINZC1GczQ7iTq3Zw==
-
-nexus-api@Nexus-Mods/node-nexus-api:
-  version "0.5.1"
-  resolved "https://codeload.github.com/Nexus-Mods/node-nexus-api/tar.gz/f04390a871d2c410256ac7e58df0a306072a6fe8"
-  dependencies:
-    request "^2.85.0"
-    string-template "^1.0.0"
 
 nice-try@^1.0.4:
   version "1.0.5"
