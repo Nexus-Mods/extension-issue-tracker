@@ -65,7 +65,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
     });
   }
 
-  public componentWillMount() {
+  public UNSAFE_componentWillMount() {
     this.updateIssues(false);
   }
 
