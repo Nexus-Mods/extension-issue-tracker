@@ -408,6 +408,9 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
           log('warn', 'Failed to retrieve github issues', err);
         });
       })
+      .catch(util.ProcessCanceled, err => {
+        log('debug', 'Failed to get list of issues', err.message);
+      })
       .catch(err => {
         // probably a network error, but this isn't really a big deal
         log('warn', 'Failed to get list of issues', err);
