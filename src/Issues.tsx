@@ -4,7 +4,7 @@ import { IGithubComment, IGithubIssue, IGithubIssueCache } from './IGithubIssue'
 import Promise from 'bluebird';
 import { IncomingMessage } from 'http';
 import { get } from 'https';
-import { IIssue } from 'nexus-api';
+import { IIssue } from '@nexusmods/nexus-api';
 import * as React from 'react';
 import { Button } from 'react-bootstrap';
 import * as ReactDOM from 'react-dom';
