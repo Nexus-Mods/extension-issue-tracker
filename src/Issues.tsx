@@ -1,7 +1,7 @@
 import { setUpdateDetails, updateIssueList } from './actions';
 import { IGithubComment, IGithubIssue, IGithubIssueCache } from './IGithubIssue';
 
-import * as Promise from 'bluebird';
+import Promise from 'bluebird';
 import { IncomingMessage } from 'http';
 import { get } from 'https';
 import { IIssue } from '@nexusmods/nexus-api';
@@ -65,7 +65,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
     });
   }
 
-  public componentWillMount() {
+  public UNSAFE_componentWillMount() {
     this.updateIssues(false);
   }
 
@@ -124,7 +124,8 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
           key='help wanted'
           name='attention-required'
           tooltip={t('Feedback required')}
-        />);
+        />
+      );
     } else {
       return null;
     }
@@ -407,6 +408,9 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
           log('warn', 'Failed to retrieve github issues', err);
         });
       })
+      .catch(util.ProcessCanceled, err => {
+        log('debug', 'Failed to get list of issues', err.message);
+      })
       .catch(err => {
         // probably a network error, but this isn't really a big deal
         log('warn', 'Failed to get list of issues', err);
@@ -444,4 +448,4 @@ function mapDispatchToProps(dispatch: any): IActionProps {
 export default
   connect(mapStateToProps, mapDispatchToProps)(
     withTranslation(['issue-tracker', 'common'])(
-      IssueList as any)) as React.ComponentClass<{}>;
+      IssueList as any)) as any;
