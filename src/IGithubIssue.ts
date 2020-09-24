@@ -108,5 +108,5 @@ export interface IGithubIssueCache {
   labels: string[];
   lastUpdated: number;
   milestone: IGithubMilestoneCache;
-  notifiedForReply: boolean;
+  lastCommentResponseMS: number;
 }

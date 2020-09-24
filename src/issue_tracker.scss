@@ -29,11 +29,18 @@
   width: 99%;
 }
 
+.issues-responder {
+  @extend .btn-embed;
+  position: absolute;
+  top: 12px;
+  right: 40px;
+}
+
 .issues-refresh {
   @extend .btn-embed;
   position: absolute;
   top: 40px;
-  right: 12px;
+  right: 15px;
 }
 
 .issue-milestone-button {
@@ -52,4 +59,99 @@
 .list-issues-container {
   height: 100%;
   overflow-y: auto;
+}
+
+#feedback-responder-dialog {
+  .modal-dialog {
+    width: 50%;
+  }
+  .modal-body {
+    height: 50vh;
+
+    .responder-developer-comment,
+    .textarea-feedback-responder {
+      max-height: 15em;
+      overflow: auto;
+      min-height: 10em;
+      max-width: 40em;
+      min-width: 30em;
+    }
+  }
+
+  .modal-footer {
+    .feedback-files {
+      display: flex;
+      flex-wrap: wrap;
+      max-height: 9em;
+      overflow-y: auto;
+      width: 100%;
+    
+      .list-group-item {
+        display: flex;
+        padding: 0px 0px !important;
+        width: 100%;
+      }
+    }
+  }
+
+  .description-text {
+    img {
+      max-width: 100%;
+      padding: 0 1%;
+    }
+  }
+
+  .menu-layer {
+    left: 0;
+  }
+
+  .extension-sort-container {
+    align-items: center;
+    padding: 4px;
+  }
+}
+
+.outstanding-issue-list {
+  width: 30%;
+  margin-right: 4px;
+  border-right: $border-width solid $border-color;
+  overflow: auto;
+
+  .list-group {
+    overflow-y: auto;
+  }
+}
+
+.responder-issue-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.responder-github-issue {
+  border-bottom: $border-width solid $border-color;
+
+  &.selected {
+    background-color: $table-bg-active;
+  }
+
+  .issue-header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    flex: 1 1 0;
+
+    .issue-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-right: 1em;
+    }
+  }
+
+  .extension-description {
+    @extend .responder-issue-text;
+  }
 }

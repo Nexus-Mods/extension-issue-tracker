@@ -1,6 +1,6 @@
 import { types, util } from 'vortex-api';
 
-import * as actions from './actions';
+import * as actions from '../actions/persistent';
 
 const persistentReducer: types.IReducerSpec = {
   reducers: {

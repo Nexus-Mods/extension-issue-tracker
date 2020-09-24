@@ -1,18 +1,24 @@
-import { setUpdateDetails, updateIssueList } from './actions';
+import { setUpdateDetails, updateIssueList } from './actions/persistent';
+import { openFeedbackResponder, setOutstandingIssues } from './actions/session';
+
 import { IGithubComment, IGithubIssue, IGithubIssueCache } from './IGithubIssue';
 
-import Promise from 'bluebird';
-import { IncomingMessage } from 'http';
-import { get } from 'https';
+import { IOutstandingIssue } from './types';
+
 import { IIssue } from '@nexusmods/nexus-api';
+import Promise from 'bluebird';
+
 import * as React from 'react';
 import { Button } from 'react-bootstrap';
 import * as ReactDOM from 'react-dom';
 import { withTranslation } from 'react-i18next';
 import { connect } from 'react-redux';
-import * as url from 'url';
+
 import { actions, ComponentEx, Dashlet, log, Spinner, tooltip, types, util } from 'vortex-api';
 import * as va from 'vortex-api';
+
+import { cacheEntry, getLastDevComment,
+  isFeedbackRequiredLabel, requestFromApi } from './util';
 
 const { EmptyPlaceholder } = va as any;
 
@@ -38,7 +44,8 @@ interface IActionProps {
   onSetUpdateDetails: (issueId: string, details: IGithubIssueCache) => void;
   onShowDialog: (type: types.DialogType, title: string, content: types.IDialogContent,
                  actions: types.DialogActions) => void;
-  onShowInfo: (message: string, dialogAction: types.INotificationAction) => void;
+  onOpenFeedbackResponder: (open: boolean) => void;
+  onSetOustandingIssues: (issues: IOutstandingIssue[]) => void;
 }
 
 type IProps = IConnectedProps & IActionProps;
@@ -53,7 +60,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
   // hide closed issues without any update after a month
   private static HIDE_AFTER = 30 * 24 * 60 * 60 * 1000;
   // allow refresh once every minute. This is mostly to prevent people from spamming the button
-  private static MIN_REFRESH_DELAY = 60 * 1000;
+  private static MIN_REFRESH_DELAY = 1;
   private mMounted: boolean = false;
   private mLastRefresh: number = 0;
 
@@ -88,6 +95,12 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
           tooltip={t('Refresh Issues')}
           onClick={this.refresh}
         />
+        <tooltip.IconButton
+          className='issues-responder'
+          icon='feedback'
+          tooltip={t('Issue Responder')}
+          onClick={this.openResponder}
+        />
         <div className='list-issues-container'>
           {this.renderIssues(issues)}
         </div>
@@ -110,15 +123,11 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
     );
   }
 
-  private isFeedbackRequiredLabel(label: string): boolean {
-    return (['help wanted', 'waiting for reply'].indexOf(label) !== -1);
-  }
-
   private renderLabel(label: string): JSX.Element {
     const { t } = this.props;
     if (label === 'bug') {
       return <tooltip.Icon key='bug' name='bug' tooltip={t('Bug')} />;
-    } else if (this.isFeedbackRequiredLabel(label)) {
+    } else if (isFeedbackRequiredLabel(label)) {
       return (
         <tooltip.Icon
           key='help wanted'
@@ -179,7 +188,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
 
     // Find all labels that require feedback from the reporter/user
     const feedbackRequiredLabels =
-      issue.labels.filter(label => this.isFeedbackRequiredLabel(label));
+      issue.labels.filter(label => isFeedbackRequiredLabel(label));
 
     return (
       <div key={issue.number.toString()} className='issue-item'>
@@ -189,7 +198,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
           {this.renderMilestone(issue)}
         </div>
         <div className='issue-item-labels'>
-          {issue.labels.map(label => this.isFeedbackRequiredLabel(label)
+          {issue.labels.map(label => isFeedbackRequiredLabel(label)
             ? null
             : this.renderLabel(label))}
           {feedbackRequiredLabels.length > 0 ? this.renderLabel(feedbackRequiredLabels[0]) : null}
@@ -254,46 +263,8 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
     return `https://api.github.com/repos/${IssueList.GITHUB_PROJ}/issues/${issueId}`;
   }
 
-  private requestFromApi(apiURL: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-      get({
-        ...url.parse(apiURL),
-        headers: { 'User-Agent': 'Vortex' },
-      } as any, (res: IncomingMessage) => {
-        const { statusCode } = res;
-        const contentType = res.headers['content-type'];
-
-        let err: string;
-        if (statusCode !== 200) {
-          err = `Request Failed. Status Code: ${statusCode}`;
-        } else if (!/^application\/json/.test(contentType)) {
-          err = `Invalid content-type ${contentType}`;
-        }
-
-        if (err !== undefined) {
-          res.resume();
-          return reject(new Error(err));
-        }
-
-        res.setEncoding('utf8');
-        let rawData = '';
-        res.on('data', (chunk) => { rawData += chunk; });
-        res.on('end', () => {
-          try {
-            resolve(JSON.parse(rawData));
-          } catch (e) {
-            reject(e);
-          }
-        });
-      })
-      .on('error', (err: Error) => {
-        return reject(err);
-      });
-    });
-  }
-
   private requestIssue(issueId: string): Promise<IGithubIssue> {
-    return this.requestFromApi(this.issueURL(issueId))
+    return requestFromApi(this.issueURL(issueId))
     .then((issue: IGithubIssue) =>
       // if the issue is labeled a duplicate, show the referenced issue
       // instead
@@ -303,7 +274,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
   }
 
   private followDuplicate(issue: IGithubIssue): Promise<IGithubIssue> {
-    return this.requestFromApi(issue.comments_url)
+    return requestFromApi(issue.comments_url)
       .then((comments: IGithubComment[]) => {
         const redir = comments.reverse()
           .find(comment => IssueList.DUPLICATE_EXP.test(comment.body));
@@ -319,38 +290,18 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
       });
   }
 
-  private cache(input: IGithubIssue, notifiedForReply: boolean): IGithubIssueCache {
-    return {
-      number: input.number,
-      closedTime: Date.parse(input.closed_at),
-      createdTime: Date.parse(input.created_at),
-      cacheTime: Date.now(),
-      comments: input.comments,
-      labels: input.labels.map(label => label.name),
-      state: input.state,
-      title: input.title,
-      body: input.body,
-      user: input.user !== undefined ? input.user.login : undefined,
-      lastUpdated: Date.parse(input.updated_at),
-      milestone: input.milestone !== null ? {
-        number: input.milestone.number,
-        title: input.milestone.title,
-        state: input.milestone.state,
-        closed_issues: input.milestone.closed_issues,
-        open_issues: input.milestone.open_issues,
-        due_on: input.milestone.due_on,
-      } : undefined,
-      notifiedForReply,
-    };
-  }
-
   private refresh = () => {
     this.updateIssues(true);
   }
 
+  private openResponder = () => {
+    const { onOpenFeedbackResponder } = this.props;
+    onOpenFeedbackResponder(true);
+  }
+
   private updateIssues(force: boolean) {
-    const { t, issues, onSetUpdateDetails,
-            onShowDialog, onShowInfo, onUpdateIssueList } = this.props;
+    const { t, issues, onOpenFeedbackResponder, onSetUpdateDetails,
+            onSetOustandingIssues, onShowDialog, onUpdateIssueList } = this.props;
     if (Date.now() - this.mLastRefresh < IssueList.MIN_REFRESH_DELAY) {
       return;
     }
@@ -359,59 +310,57 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
     }
     this.mLastRefresh = Date.now();
     queryIssues(this.context.api)
-      .then((res: Array<{ issue_number: number }>) => {
-        onUpdateIssueList(res.map(issue => issue.issue_number.toString()));
+      .then((res: Array<{ issue_title: string, issue_number: number }>) => {
+        const filteredRes = res.filter(issue => !issue.issue_title.startsWith('Response to #'));
+        onUpdateIssueList(filteredRes.map(issue => issue.issue_number.toString()));
         const now = Date.now();
-        const notificationURLs: string[] = [];
-        return Promise.mapSeries(res.map(issue => issue.issue_number.toString()), issueId => {
+        const outstanding: IOutstandingIssue[] = [];
+        return Promise.mapSeries(filteredRes.map(issue =>
+          issue.issue_number.toString()), issueId => {
           if (force
               || (issues[issueId] === undefined)
               || (issues[issueId].cacheTime === undefined)
               || ((now - issues[issueId].cacheTime) > UPDATE_FREQUENCY)) {
             return this.requestIssue(issueId)
               .then(issue => {
-                const resolvedIssueId = issue.number.toString();
-                const hasBeenNotified = util.getSafe(issues, [issueId, 'notifiedForReply'], false);
+                const lastCommentResponseMS = util.getSafe(issues,
+                  [issueId, 'lastCommentResponseMS'], 0);
                 const replyRequired = issue.labels.find(lbl =>
-                  this.isFeedbackRequiredLabel(lbl.name)) !== undefined;
+                  isFeedbackRequiredLabel(lbl.name)) !== undefined;
 
-                const notificationNeeded = replyRequired && !hasBeenNotified;
-                if (notificationNeeded) {
-                  // tslint:disable-next-line: max-line-length
-                  notificationURLs.push(`https://www.github.com/${IssueList.GITHUB_PROJ}/issues/${resolvedIssueId}`);
-                }
+                const isClosed = issue.state === 'closed';
 
-                const notifiedForReply = (hasBeenNotified)
-                  ? hasBeenNotified
-                  : notificationNeeded;
+                return getLastDevComment(issue)
+                  .then((comment: IGithubComment) => {
+                    if (comment !== undefined) {
+                      const commentDate = new Date(comment.updated_at);
+                      if (replyRequired
+                      && !isClosed
+                      && (lastCommentResponseMS < commentDate.getTime())) {
+                        outstanding.push({ issue, lastDevComment: comment });
+                      }
+                    }
 
-                onSetUpdateDetails(issueId, this.cache(issue, notifiedForReply));
-                return Promise.resolve();
+                    onSetUpdateDetails(issueId, cacheEntry(issue, lastCommentResponseMS));
+                    return Promise.resolve();
+                  });
               });
           }
         })
         .then(() => {
-          if (notificationURLs.length > 0) {
-            const urlString = '[url]' + notificationURLs.join('[/url]<br />[url]');
-            const showDialog = () => onShowDialog('info', t('You\'ve received feedback response'), {
-              bbcode: t('The Vortex developers require your assistance with a bug/suggestion '
-              + 'which you have submitted. To view our response please click on any of the '
-              + 'below links: <br /><br />'
-              + '{{ urlString }}', { replace: { urlString } }),
-            }, [ { label: 'Close' } ]);
-
-            onShowInfo('You\'ve received feedback response',
-              { title: 'More', action: () => showDialog() });
+          if (outstanding.length > 0) {
+            onOpenFeedbackResponder(true);
+            onSetOustandingIssues(outstanding);
           }
         })
         .catch(err => {
           log('warn', 'Failed to retrieve github issues', err);
         });
       })
-      .catch(util.ProcessCanceled, err => {
-        log('debug', 'Failed to get list of issues', err.message);
-      })
       .catch(err => {
+        if (err instanceof util.ProcessCanceled) {
+          log('debug', 'Failed to get list of issues', err.message);
+        }
         // probably a network error, but this isn't really a big deal
         log('warn', 'Failed to get list of issues', err);
       })
@@ -436,12 +385,10 @@ function mapDispatchToProps(dispatch: any): IActionProps {
       dispatch(setUpdateDetails(issueId, details)),
     onShowDialog: (type, title, content, dialogActions) =>
       dispatch(actions.showDialog(type, title, content, dialogActions)),
-    onShowInfo: (message: string, dialogAction: types.INotificationAction) =>
-      dispatch(actions.addNotification({
-        type: 'info',
-        message,
-        actions: [ dialogAction ],
-    })),
+    onOpenFeedbackResponder: (open: boolean) =>
+      dispatch(openFeedbackResponder(open)),
+    onSetOustandingIssues: (issues: IOutstandingIssue[]) =>
+      dispatch(setOutstandingIssues(issues)),
   };
 }
 
