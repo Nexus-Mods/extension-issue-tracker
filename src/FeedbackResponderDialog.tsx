@@ -203,11 +203,14 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
           <p className='issue-title'>
             {title}
           </p>
-          <a
-            data-link={issue.html_url}
-            onClick={this.openLink}
-          >#{issue.number}
-          </a>
+          <div>
+            <a
+              data-link={issue.html_url}
+              onClick={this.openLink}
+            >
+              #{issue.number}
+            </a>
+          </div>
         </FlexLayout>
         </div>
       </ListGroupItem>
@@ -568,6 +571,13 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
           message: 'Feedback response sent successfully',
           displayMS: 3000,
         });
+
+        const outstanding = outstandingIssues.find(iss =>
+          iss.issue.number === currentIssue.number);
+
+        const commentDate = new Date(outstanding.lastDevComment.created_at).getTime();
+        onSetUpdateDetails(currentIssue.number.toString(),
+          cacheEntry(currentIssue, commentDate));
       }
 
       this.nextState.feedbackMessage = '';
@@ -585,13 +595,6 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
           .then(() => {
             const filteredOut = outstandingIssues.filter(iss =>
               iss.issue.number !== currentIssue.number);
-
-            const outstanding = outstandingIssues.find(iss =>
-              iss.issue.number === currentIssue.number);
-
-            const commentDate = new Date(outstanding.lastDevComment.created_at).getTime();
-            onSetUpdateDetails(currentIssue.number.toString(),
-              cacheEntry(currentIssue, commentDate));
             onDismissNotification(notificationId);
             onSetOustandingIssues(filteredOut);
             onOpen(false);

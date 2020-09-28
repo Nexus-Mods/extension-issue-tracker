@@ -354,6 +354,13 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
           }
         })
         .catch(err => {
+          if (err.message.includes('Status Code: 403') && force) {
+            this.context.api.sendNotification({
+              message: t('Sent too many github API requests - try again later'),
+              type: 'info',
+              displayMS: 3000,
+            });
+          }
           log('warn', 'Failed to retrieve github issues', err);
         });
       })
