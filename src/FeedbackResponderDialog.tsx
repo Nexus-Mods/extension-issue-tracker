@@ -190,7 +190,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
     const title = issue.title;
     const key = issue.id + idx;
     const classes = (currentIssue.number === issue.number)
-      ? ['responder-github-issue', 'selected-issue'] : ['responder-github-issue'];
+      ? ['responder-github-issue', 'selected'] : ['responder-github-issue'];
     return (
       <ListGroupItem
         key={key}
