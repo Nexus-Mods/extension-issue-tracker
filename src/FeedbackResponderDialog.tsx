@@ -8,7 +8,7 @@ import { Alert, DropdownButton, FormControl, FormGroup, ListGroup,
 import { withTranslation } from 'react-i18next';
 import { connect } from 'react-redux';
 
-import { actions, ComponentEx, FlexLayout, fs, Modal,
+import { actions, ComponentEx, EmptyPlaceholder, FlexLayout, fs, Modal,
          tooltip, util } from 'vortex-api';
 
 import { file as tmpFile } from 'tmp';
@@ -84,7 +84,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
 
   public render(): JSX.Element {
     const { t, open } = this.props;
-    const { feedbackFiles } = this.state;
+    const { currentIssue, feedbackFiles } = this.state;
 
     const messageValid = this.validateMessage();
     const maySend = (messageValid === undefined);
@@ -93,7 +93,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
       ? Object.keys(feedbackFiles).map(this.renderFeedbackFile)
       : null;
 
-    const buttons = [
+    const buttons = (currentIssue !== undefined) ? [
       (
         <FlexLayout.Fixed key='attach-button'>
           {this.renderAttachButton()}
@@ -103,7 +103,46 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
           {this.renderFilesArea(maySend)}
         </FlexLayout.Fixed>
       ),
-    ];
+    ] : [(
+      <FlexLayout.Fixed>
+        <tooltip.Button
+          style={{ display: 'block', marginLeft: 'auto', marginRight: 0 }}
+          id='btn-close-responder'
+          tooltip={t('Close')}
+          onClick={this.close}
+        >
+          {t('Close')}
+        </tooltip.Button>
+      </FlexLayout.Fixed>
+    )];
+
+    const renderBody = () => currentIssue !== undefined ? (
+      <FlexLayout type='row'>
+        {this.renderIssueSelection()}
+        <FlexLayout type='column'>
+          <FlexLayout.Fixed>
+            {this.renderLatestComment()}
+            {this.renderResponderContent(messageValid)}
+          </FlexLayout.Fixed>
+        </FlexLayout>
+      </FlexLayout>
+      ) : (
+        <div className='responder-place-holder'>
+          <EmptyPlaceholder
+            icon='report'
+            text={t('No Feedback Response Required')}
+            subtext={t('You look wonderful today!')}
+          />
+        </div>
+      );
+
+    const renderFeedFiles = () => (
+      <FlexLayout type='column'>
+        <ListGroup className='feedback-files'>
+          {renderFeedbackFiles()}
+        </ListGroup>
+      </FlexLayout>
+    );
 
     return (
       <Modal
@@ -115,24 +154,12 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
           <Modal.Title>{t('Feedback Responder')}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <FlexLayout type='row'>
-            {this.renderIssueSelection()}
-            <FlexLayout type='column'>
-              <FlexLayout.Fixed>
-                {this.renderLatestComment()}
-                {this.renderResponderContent(messageValid)}
-              </FlexLayout.Fixed>
-            </FlexLayout>
-          </FlexLayout>
+          {renderBody()}
         </Modal.Body>
         <Modal.Footer>
           <FlexLayout type='row'>
             <FlexLayout.Fixed style={{ width: '80%' }}>
-              <FlexLayout type='column'>
-                <ListGroup className='feedback-files'>
-                  {renderFeedbackFiles()}
-                </ListGroup>
-              </FlexLayout>
+              {renderFeedFiles()}
             </FlexLayout.Fixed>
             <FlexLayout.Fixed style={{ width: '20%' }}>
               {buttons.map(button => button)}
