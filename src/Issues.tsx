@@ -60,7 +60,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
   // hide closed issues without any update after a month
   private static HIDE_AFTER = 30 * 24 * 60 * 60 * 1000;
   // allow refresh once every minute. This is mostly to prevent people from spamming the button
-  private static MIN_REFRESH_DELAY = 1;
+  private static MIN_REFRESH_DELAY = 60 * 1000;
   private mMounted: boolean = false;
   private mLastRefresh: number = 0;
 
@@ -301,7 +301,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
 
   private updateIssues(force: boolean) {
     const { t, issues, onOpenFeedbackResponder, onSetUpdateDetails,
-            onSetOustandingIssues, onShowDialog, onUpdateIssueList } = this.props;
+            onSetOustandingIssues, onUpdateIssueList } = this.props;
     if (Date.now() - this.mLastRefresh < IssueList.MIN_REFRESH_DELAY) {
       return;
     }
