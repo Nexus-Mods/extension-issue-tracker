@@ -37,6 +37,7 @@ function queryIssues(api: types.IExtensionApi): Promise<IIssue[]> {
 
 interface IConnectedProps {
   issues: { [id: string]: IGithubIssueCache };
+  outstandingIssues: IOutstandingIssue[];
 }
 
 interface IActionProps {
@@ -295,7 +296,10 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
   }
 
   private openResponder = () => {
-    const { onOpenFeedbackResponder } = this.props;
+    const { onOpenFeedbackResponder, outstandingIssues } = this.props;
+    if (outstandingIssues.length === 0) {
+      this.updateIssues(true);
+    }
     onOpenFeedbackResponder(true);
   }
 
@@ -381,6 +385,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
 
 function mapStateToProps(state: any): IConnectedProps {
   return {
+    outstandingIssues: util.getSafe(state, ['session', 'issues', 'oustandingIssues'], []),
     issues: state.persistent.issues.issues,
   };
 }
