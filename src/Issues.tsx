@@ -234,13 +234,15 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
                  || (now - issues[id].lastUpdated < IssueList.HIDE_AFTER))
       .sort((lhs, rhs) => issues[rhs].lastUpdated - issues[lhs].lastUpdated);
 
-    if (Object.keys(sorted).length === 0) {
+    const distinct = [].concat([...new Set(sorted.map(id => issues[id].number))]);
+
+    if (Object.keys(distinct).length === 0) {
       return this.renderNoIssues();
     }
 
     return (
       <div className='list-issues'>
-        {sorted.map(id => this.renderIssue(issues[id]))}
+        {distinct.map(id => this.renderIssue(issues[id]))}
       </div>
     );
   }
@@ -327,6 +329,15 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
               || ((now - issues[issueId].cacheTime) > UPDATE_FREQUENCY)) {
             return this.requestIssue(issueId)
               .then(issue => {
+                // If the user had started 2 issues and we had marked
+                //  one of those as a duplicate of the other - it should be
+                //  safe to filter out one of them as the duplicate would always
+                //  point to the open issue where we may respond.
+                const existingIssueIds = Object.keys(issues).map(key => issues[key].number);
+                if (existingIssueIds.includes(issue.number)) {
+                  // Already displaying this issue.
+                  return Promise.resolve();
+                }
                 const lastCommentResponseMS = util.getSafe(issues,
                   [issueId, 'lastCommentResponseMS'], 0);
                 const replyRequired = issue.labels.find(lbl =>
