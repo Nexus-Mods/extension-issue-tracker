@@ -10,6 +10,7 @@ export function isFeedbackRequiredLabel(label: string): boolean {
 }
 
 export function isVortexDev(comment: IGithubComment): boolean {
+  // TODO: there must be a better way to distinctly identify a staff member
   return ['TanninOne', 'IDCs'].indexOf(comment.user.login) !== -1;
 }
 

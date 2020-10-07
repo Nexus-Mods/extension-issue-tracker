@@ -329,15 +329,6 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
               || ((now - issues[issueId].cacheTime) > UPDATE_FREQUENCY)) {
             return this.requestIssue(issueId)
               .then(issue => {
-                // If the user had started 2 issues and we had marked
-                //  one of those as a duplicate of the other - it should be
-                //  safe to filter out one of them as the duplicate would always
-                //  point to the open issue where we may respond.
-                const existingIssueIds = Object.keys(issues).map(key => issues[key].number);
-                if (existingIssueIds.includes(issue.number)) {
-                  // Already displaying this issue.
-                  return Promise.resolve();
-                }
                 const lastCommentResponseMS = util.getSafe(issues,
                   [issueId, 'lastCommentResponseMS'], 0);
                 const replyRequired = issue.labels.find(lbl =>
@@ -351,7 +342,16 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
                       const commentDate = new Date(comment.updated_at);
                       if (replyRequired
                       && !isClosed
-                      && (lastCommentResponseMS < commentDate.getTime())) {
+                      && (lastCommentResponseMS < commentDate.getTime())
+                      && (outstanding.find(out => out.issue.number === issue.number) === undefined)) {
+                        // Only add this if we confirm that:
+                        //  1. The waiting for response label is set.
+                        //  2. The issue is still open.
+                        //  3. The latest comment's date is more recent than the date of the
+                        //     comment to which the user has responded last.
+                        //  4. The issue number isn't already added in the outstanding list.
+                        //     This will happen if the user had opened 2 different issues and
+                        //      we closed one of them as a duplicate of the other.
                         outstanding.push({ issue, lastDevComment: comment });
                       }
                     }
