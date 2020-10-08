@@ -90,7 +90,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
     const maySend = (messageValid === undefined);
 
     const renderFeedbackFiles = () => (feedbackFiles !== undefined)
-      ? Object.keys(feedbackFiles).map(this.renderFeedbackFile)
+      ? Object.keys(feedbackFiles).map((key, idx) => this.renderFeedbackFile(key, idx))
       : null;
 
     const buttons = (currentIssue !== undefined) ? [
@@ -104,7 +104,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
         </FlexLayout.Fixed>
       ),
     ] : [(
-      <FlexLayout.Fixed>
+      <FlexLayout.Fixed key='close-responder-button'>
         <tooltip.Button
           style={{ display: 'block', marginLeft: 'auto', marginRight: 0 }}
           id='btn-close-responder'
@@ -254,12 +254,12 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
     ) : null;
   }
 
-  private renderFeedbackFile = (feedbackFile: string) => {
+  private renderFeedbackFile = (feedbackFile: string, idx: number) => {
     const { t } = this.props;
     const { feedbackFiles } = this.state;
     return (
       <ListGroupItem
-        key={feedbackFiles[feedbackFile].filename}
+        key={feedbackFiles[feedbackFile].filename + idx}
       >
         <p style={{ display: 'inline' }}>
           {feedbackFiles[feedbackFile].filename}
@@ -270,7 +270,6 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
         <tooltip.IconButton
           className='btn-embed'
           id={feedbackFiles[feedbackFile].filename}
-          key={feedbackFiles[feedbackFile].filename}
           tooltip={t('Remove')}
           onClick={this.remove}
           icon='delete'
