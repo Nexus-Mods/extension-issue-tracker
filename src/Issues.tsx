@@ -183,7 +183,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
 
   private renderIssue = (issue: IGithubIssueCache) => {
     const { t } = this.props;
-    if (issue.number === undefined) {
+    if (issue?.number === undefined) {
       return null;
     }
 
@@ -234,7 +234,14 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
                  || (now - issues[id].lastUpdated < IssueList.HIDE_AFTER))
       .sort((lhs, rhs) => issues[rhs].lastUpdated - issues[lhs].lastUpdated);
 
-    const distinct = [].concat([...new Set(sorted.map(id => issues[id].number))]);
+    const distinct = [].concat([...new Set(sorted.map(id => {
+      // We don't want to show the user the same issue twice.
+      //  If he created 2 issues and one has been labeled a duplicate
+      //  of the other, we're going to ensure we filter out the duplicate.
+      const targetNumber = issues[id].number;
+      return (issues[targetNumber]?.number !== undefined)
+        ? targetNumber : id;
+    }))]);
 
     if (Object.keys(distinct).length === 0) {
       return this.renderNoIssues();
