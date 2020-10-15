@@ -36,6 +36,7 @@ interface IConnectedProps {
   open: boolean;
   APIKey: string;
   outstandingIssues: IOutstandingIssue[];
+  issues: { [id: string]: IGithubIssueCache };
 }
 
 interface IActionProps {
@@ -528,7 +529,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
   private doSubmitFeedback() {
     const { APIKey, onOpen, onSetOustandingIssues,
             onSetUpdateDetails, onShowError, onDismissNotification,
-            onShowActivity, outstandingIssues } = this.props;
+            onShowActivity, outstandingIssues, issues } = this.props;
 
     const { feedbackMessage, feedbackFiles, currentIssue } = this.state;
 
@@ -574,8 +575,20 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
         const outstanding = outstandingIssues.find(iss =>
           iss.issue.number === currentIssue.number);
 
-        const commentDate = new Date(outstanding.lastDevComment.created_at).getTime();
-        onSetUpdateDetails(currentIssue.number.toString(), cacheEntry(currentIssue, commentDate));
+        const commentDateMS: number = new Date(outstanding.lastDevComment.created_at).getTime();
+        const cacheEntries = Object.keys(issues)
+          .filter(key => issues[key].number === currentIssue.number)
+          .map(key => ({
+            key,
+            cacheEntry: {
+              ...issues[key],
+              lastCommentResponseMS: commentDateMS,
+            },
+          }));
+
+        cacheEntries.forEach(entry => {
+          onSetUpdateDetails(entry.key, entry.cacheEntry);
+        });
       }
 
       let removeFiles: string[];
@@ -617,6 +630,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
 
 function mapStateToProps(state: any): IConnectedProps {
   return {
+    issues: util.getSafe(state, ['persistent', 'issues', 'issues'], {}),
     outstandingIssues: util.getSafe(state, ['session', 'issues', 'oustandingIssues'], []),
     APIKey: state.confidential.account.nexus.APIKey,
     open: util.getSafe(state, ['session', 'issues', 'feedbackResponderOpen'], false),
