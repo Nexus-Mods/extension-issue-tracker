@@ -595,7 +595,11 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
               iss.issue.number !== currentIssue.number);
             onDismissNotification(notificationId);
             onSetOustandingIssues(filteredOut);
-            onOpen(false);
+
+            if (filteredOut.length === 0) {
+              // Close if no issues remaining
+              onOpen(false);
+            }
           })
           .catch(innerErr => {
             onShowError('An error occurred removing a file', innerErr, notificationId);
