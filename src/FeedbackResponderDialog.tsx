@@ -532,7 +532,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
 
     const { feedbackMessage, feedbackFiles, currentIssue } = this.state;
 
-    const notificationId = 'submit-feedback';
+    const notificationId = 'submit-feedback-response';
     onShowActivity('Submitting feedback', notificationId);
 
     this.nextState.sending = true;
@@ -578,10 +578,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
         onSetUpdateDetails(currentIssue.number.toString(), cacheEntry(currentIssue, commentDate));
       }
 
-      this.nextState.feedbackMessage = '';
-
       let removeFiles: string[];
-
       if (feedbackFiles !== undefined) {
         removeFiles = Object.keys(feedbackFiles)
           .filter(fileId => ['State', 'Dump', 'LogCopy'].indexOf(feedbackFiles[fileId].type) !== -1)
@@ -589,30 +586,32 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
       }
 
       if (removeFiles !== undefined) {
-        Promise.map(removeFiles, removeFile => fs.removeAsync(removeFile))
-          .then(() => {
-            const filteredOut = outstandingIssues.filter(iss =>
-              iss.issue.number !== currentIssue.number);
-            onDismissNotification(notificationId);
-            onSetOustandingIssues(filteredOut);
-
-            if (filteredOut.length === 0) {
-              // Close if no issues remaining
-              onOpen(false);
-            }
-          })
+        Promise.each(removeFiles, removeFile => fs.removeAsync(removeFile))
           .catch(innerErr => {
-            onShowError('An error occurred removing a file', innerErr, notificationId);
+            onShowError('An error occurred removing temporary feedback files',
+              innerErr, notificationId);
+
+            return Promise.resolve();
         });
       }
 
+      const filteredOut = outstandingIssues.filter(iss =>
+        iss.issue.number !== currentIssue.number);
+      onDismissNotification(notificationId);
+      onSetOustandingIssues(filteredOut);
+
+      if (filteredOut.length === 0) {
+        // Close if no issues remaining
+        onOpen(false);
+      }
+
       this.clear();
-      onOpen(false);
     });
   }
   private clear() {
     this.nextState.feedbackFiles = {};
     this.nextState.feedbackMessage = '';
+    this.nextState.currentIssue = undefined;
   }
 }
 
