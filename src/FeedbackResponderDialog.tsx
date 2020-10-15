@@ -60,7 +60,7 @@ interface IComponentState {
 
 class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
   private static MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024;
-  private static MIN_TEXT_LENGTH = 50;
+  private static MIN_TEXT_LENGTH = 10;
 
   constructor(props: IProps) {
     super(props);
@@ -575,8 +575,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
           iss.issue.number === currentIssue.number);
 
         const commentDate = new Date(outstanding.lastDevComment.created_at).getTime();
-        onSetUpdateDetails(currentIssue.number.toString(),
-          cacheEntry(currentIssue, commentDate));
+        onSetUpdateDetails(currentIssue.number.toString(), cacheEntry(currentIssue, commentDate));
       }
 
       this.nextState.feedbackMessage = '';
