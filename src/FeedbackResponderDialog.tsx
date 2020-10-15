@@ -18,12 +18,12 @@ import { NAMESPACE } from './statics';
 import { setUpdateDetails } from './actions/persistent';
 import { openFeedbackResponder, setOutstandingIssues } from './actions/session';
 
-import { cacheEntry } from './util';
-
 import Promise from 'bluebird';
 
 import { IGithubComment, IGithubIssue, IGithubIssueCache } from './IGithubIssue';
 import { IOutstandingIssue } from './types';
+
+import { getCompliment } from './compliments';
 
 interface IFeedbackFile {
   filename: string;
@@ -57,6 +57,7 @@ interface IComponentState {
   feedbackMessage: string;
   currentIssue: IGithubIssue;
   feedbackFiles: { [fileId: string]: IFeedbackFile };
+  randomCompliment: string;
 }
 
 class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
@@ -71,6 +72,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
       feedbackMessage: '',
       currentIssue: undefined,
       feedbackFiles: {},
+      randomCompliment: getCompliment(),
     });
   }
 
@@ -85,7 +87,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
 
   public render(): JSX.Element {
     const { t, open } = this.props;
-    const { currentIssue, feedbackFiles } = this.state;
+    const { currentIssue, feedbackFiles, randomCompliment } = this.state;
 
     const messageValid = this.validateMessage();
     const maySend = (messageValid === undefined);
@@ -132,7 +134,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
           <EmptyPlaceholder
             icon='report'
             text={t('No Feedback Response Required')}
-            subtext={t('You look wonderful today!')}
+            subtext={t(`Our feedback to you: "${randomCompliment}"`)}
           />
         </div>
       );
@@ -152,7 +154,9 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
         onHide={this.close}
       >
         <Modal.Header>
-          <Modal.Title>{t('Feedback Responder')}</Modal.Title>
+          <Modal.Title>
+            {t('Feedback Responder - Where you can help investigate bugs you reported')}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {renderBody()}
@@ -334,7 +338,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
 
     if ((feedbackMessage.length > 0)
      && (feedbackMessage.length < FeedbackResponderDialog.MIN_TEXT_LENGTH)) {
-      return t('Please provide a meaningful response of at least {{minLength}} characters',
+      return t('Please provide a response of at least {{minLength}} characters',
               { replace: { minLength: FeedbackResponderDialog.MIN_TEXT_LENGTH } });
     }
 
