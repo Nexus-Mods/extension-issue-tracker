@@ -357,6 +357,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
       >
         <MenuItem eventKey='log'>{t('Vortex Log')}</MenuItem>
         <MenuItem eventKey='netlog'>{t('Vortex Network Log')}</MenuItem>
+        <MenuItem eventKey='session'>{t('Vortex Session Log')}</MenuItem>
         <MenuItem eventKey='settings'>{t('Application Settings')}</MenuItem>
         <MenuItem eventKey='state'>{t('Application State')}</MenuItem>
         <MenuItem eventKey='actions'>{t('Recent State Changes')}</MenuItem>
@@ -432,6 +433,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
       case 'log': this.attachLog(); break;
       case 'netlog': this.attachNetLog(); break;
       case 'actions': this.attachActions('Action History'); break;
+      case 'session': this.attachState('session', 'Vortex Session'); break;
       case 'settings': this.attachState('settings', 'Vortex Settings'); break;
       case 'state': this.attachState('persistent', 'Vortex State'); break;
     }
