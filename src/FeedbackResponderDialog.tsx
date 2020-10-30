@@ -311,7 +311,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
     }
 
     const errMessage = () => (messageValid !== undefined)
-      ? <p key='error-message' style={{ color: 'red' }}>
+      ? <p key='error-message' className='error-message'>
         {messageValid}
       </p>
       : null;

@@ -67,11 +67,10 @@
 
     .responder-developer-comment,
     .textarea-feedback-responder {
-      max-height: 15em;
-      overflow: auto;
-      min-height: 10em;
-      max-width: 35em;
-      min-width: 35em;
+      min-height: 80px;
+      width: 100%;
+      resize: none;
+      max-width: 600px;
     }
 
     .responder-place-holder {
@@ -156,6 +155,8 @@
     margin-left: 5px;
     display: flex;
     margin-right: 0 !important;
+    width: 99%;
+    resize: none;
   }
 
   .responder-developer-comment p {
@@ -179,5 +180,11 @@
     height: 15px;
     width: 15px;
     shape-rendering: crispedges;
+  }
+
+  .error-message {
+    color: red;
+    margin: 0;
+    margin-top: -10px;
   }
 }
