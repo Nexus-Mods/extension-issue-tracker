@@ -62,9 +62,6 @@
 }
 
 #feedback-responder-dialog {
-  .modal-dialog {
-    width: 50%;
-  }
   .modal-body {
     height: 50vh;
 
@@ -92,7 +89,7 @@
       max-height: 9em;
       overflow-y: auto;
       width: 100%;
-    
+
       .list-group-item {
         display: flex;
         padding: 0px 0px !important;
@@ -140,5 +137,47 @@
       text-overflow: ellipsis;
       margin-right: 1em;
     }
+  }
+}
+
+// Massimo's Fixes
+// Im putting most of my fixes in the bottom
+
+#feedback-responder-dialog {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+
+  .modal-dialog {
+    width: auto;
+  }
+
+  .textarea-feedback-responder {
+    margin-left: 5px;
+    display: flex;
+    margin-right: 0 !important;
+  }
+
+  .responder-developer-comment p {
+    padding: 0.2em 0.5em;
+  }
+
+  #btn-attach-feedback {
+    margin-bottom: 10px;
+  }
+
+  .feedback-files.list-group {
+    flex-direction: column;
+    text-align: left;
+  }
+
+  .btn-delete-file {
+    margin-left: 5px;
+  }
+
+  svg.icon.icon-delete {
+    height: 15px;
+    width: 15px;
+    shape-rendering: crispedges;
   }
 }

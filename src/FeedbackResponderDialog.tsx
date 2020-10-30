@@ -3,13 +3,17 @@ import _ from 'lodash';
 import * as os from 'os';
 import * as path from 'path';
 import * as React from 'react';
-import { Alert, DropdownButton, FormControl, FormGroup, ListGroup,
-         ListGroupItem, MenuItem, Panel } from 'react-bootstrap';
+import {
+  Alert, DropdownButton, FormControl, FormGroup, ListGroup,
+  ListGroupItem, MenuItem, Panel
+} from 'react-bootstrap';
 import { withTranslation } from 'react-i18next';
 import { connect } from 'react-redux';
 
-import { actions, ComponentEx, EmptyPlaceholder, FlexLayout, fs, Modal,
-         tooltip, util } from 'vortex-api';
+import {
+  actions, ComponentEx, EmptyPlaceholder, FlexLayout, fs, Modal,
+  tooltip, util
+} from 'vortex-api';
 
 import { file as tmpFile } from 'tmp';
 
@@ -46,7 +50,7 @@ interface IActionProps {
   onDismissNotification: (id: string) => void;
   onSetUpdateDetails: (issueId: string, details: IGithubIssueCache) => void;
   onShowError: (message: string, details?: string | Error,
-                notificationId?: string, allowReport?: boolean) => void;
+    notificationId?: string, allowReport?: boolean) => void;
 }
 
 type IProps = IConnectedProps & IActionProps;
@@ -96,28 +100,30 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
       ? Object.keys(feedbackFiles).map((key, idx) => this.renderFeedbackFile(key, idx))
       : null;
 
-    const buttons = (currentIssue !== undefined) ? [
-      (
+    const buttons = (currentIssue !== undefined)
+      ?
+      [(
         <FlexLayout.Fixed key='attach-button'>
           {this.renderAttachButton()}
         </FlexLayout.Fixed>
-      ), (
+      ),
+      (
         <FlexLayout.Fixed key='files-list'>
           {this.renderFilesArea(maySend)}
         </FlexLayout.Fixed>
-      ),
-    ] : [(
-      <FlexLayout.Fixed key='close-responder-button'>
-        <tooltip.Button
-          style={{ display: 'block', marginLeft: 'auto', marginRight: 0 }}
-          id='btn-close-responder'
-          tooltip={t('Close')}
-          onClick={this.close}
-        >
-          {t('Close')}
-        </tooltip.Button>
-      </FlexLayout.Fixed>
-    )];
+      )]
+      : [(
+        <FlexLayout.Fixed key='close-responder-button'>
+          <tooltip.Button
+            style={{ display: 'block', marginLeft: 'auto', marginRight: 0 }}
+            id='btn-close-responder'
+            tooltip={t('Close')}
+            onClick={this.close}
+          >
+            {t('Close')}
+          </tooltip.Button>
+        </FlexLayout.Fixed>
+      )];
 
     const renderBody = () => currentIssue !== undefined ? (
       <FlexLayout type='row'>
@@ -129,7 +135,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
           </FlexLayout.Fixed>
         </FlexLayout>
       </FlexLayout>
-      ) : (
+    ) : (
         <div className='responder-place-holder'>
           <EmptyPlaceholder
             icon='report'
@@ -204,19 +210,19 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
         onClick={this.select}
       >
         <div className='issue-header'>
-        <FlexLayout type='row' style={{ justifyContent: 'space-between' }}>
-          <p className='issue-title'>
-            {title}
-          </p>
-          <div>
-            <a
-              data-link={issue.html_url}
-              onClick={this.openLink}
-            >
-              #{issue.number}
-            </a>
-          </div>
-        </FlexLayout>
+          <FlexLayout type='row' style={{ justifyContent: 'space-between' }}>
+            <p className='issue-title'>
+              {title}
+            </p>
+            <div>
+              <a
+                data-link={issue.html_url}
+                onClick={this.openLink}
+              >
+                #{issue.number}
+              </a>
+            </div>
+          </FlexLayout>
         </div>
       </ListGroupItem>
     );
@@ -240,6 +246,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
     const renderComment = (comment: IGithubComment) => (
       <div>
         <FlexLayout
+          fill={false}
           type='column'
           style={{ marginLeft: '5px' }}
         >
@@ -263,9 +270,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
     const { t } = this.props;
     const { feedbackFiles } = this.state;
     return (
-      <ListGroupItem
-        key={feedbackFiles[feedbackFile].filename + idx}
-      >
+      <div className="file-list-element">
         <p style={{ display: 'inline' }}>
           {feedbackFiles[feedbackFile].filename}
         </p>
@@ -273,13 +278,13 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
           {' '}({util.bytesToString(feedbackFiles[feedbackFile].size)})
         </p>
         <tooltip.IconButton
-          className='btn-embed'
+          className='btn-embed btn-delete-file'
           id={feedbackFiles[feedbackFile].filename}
           tooltip={t('Remove')}
           onClick={this.remove}
           icon='delete'
         />
-      </ListGroupItem>
+      </div>
     );
   }
 
@@ -308,7 +313,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
     const errMessage = () => (messageValid !== undefined)
       ? <p key='error-message' style={{ color: 'red' }}>
         {messageValid}
-        </p>
+      </p>
       : null;
 
     const fields = [
@@ -337,9 +342,9 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
     const { feedbackMessage } = this.state;
 
     if ((feedbackMessage.length > 0)
-     && (feedbackMessage.length < FeedbackResponderDialog.MIN_TEXT_LENGTH)) {
+      && (feedbackMessage.length < FeedbackResponderDialog.MIN_TEXT_LENGTH)) {
       return t('Please provide a response of at least {{minLength}} characters',
-              { replace: { minLength: FeedbackResponderDialog.MIN_TEXT_LENGTH } });
+        { replace: { minLength: FeedbackResponderDialog.MIN_TEXT_LENGTH } });
     }
 
     return undefined;
@@ -392,8 +397,8 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
             tooltip={t('Submit Feedback')}
             onClick={this.submitFeedback}
             disabled={sending
-                    || (feedbackMessage.length === 0)
-                    || !valid}
+              || (feedbackMessage.length === 0)
+              || !valid}
           >
             {t('Submit Feedback')}
           </tooltip.Button>
@@ -534,8 +539,8 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
 
   private doSubmitFeedback() {
     const { APIKey, onOpen, onSetOustandingIssues,
-            onSetUpdateDetails, onShowError, onDismissNotification,
-            onShowActivity, outstandingIssues, issues } = this.props;
+      onSetUpdateDetails, onShowError, onDismissNotification,
+      onShowActivity, outstandingIssues, issues } = this.props;
 
     const { feedbackMessage, feedbackFiles, currentIssue } = this.state;
 
@@ -547,85 +552,85 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
     const title = `Response to #${currentIssue.number}`;
 
     const files: string[] = [];
-    Object.keys(feedbackFiles).forEach (key => {
+    Object.keys(feedbackFiles).forEach(key => {
       files.push(feedbackFiles[key].filePath);
     });
 
     this.context.api.events.emit('submit-feedback',
-                                 title,
-                                 this.systemInfo() + '\n' + feedbackMessage,
-                                 undefined,
-                                 files,
-                                 (APIKey === undefined),
-                                 (err: Error) => {
-      this.nextState.sending = false;
-      if (err !== null) {
-        if (err.name === 'ParameterInvalid') {
-          onShowError('Failed to send feedback', err.message, notificationId, false);
-        } else if ((err as any).body !== undefined) {
-          onShowError('Failed to send feedback', `${err.message} - ${(err as any).body}`,
-                      notificationId, false);
+      title,
+      this.systemInfo() + '\n' + feedbackMessage,
+      undefined,
+      files,
+      (APIKey === undefined),
+      (err: Error) => {
+        this.nextState.sending = false;
+        if (err !== null) {
+          if (err.name === 'ParameterInvalid') {
+            onShowError('Failed to send feedback', err.message, notificationId, false);
+          } else if ((err as any).body !== undefined) {
+            onShowError('Failed to send feedback', `${err.message} - ${(err as any).body}`,
+              notificationId, false);
+          } else {
+            onShowError('Failed to send feedback', err, notificationId, false);
+          }
+          this.clear();
+          onOpen(false);
+          return;
         } else {
-          onShowError('Failed to send feedback', err, notificationId, false);
+          this.context.api.sendNotification({
+            type: 'success',
+            message: 'Feedback response sent successfully',
+            displayMS: 3000,
+          });
+
+          const outstanding = outstandingIssues.find(iss =>
+            iss.issue.number === currentIssue.number);
+
+          const commentDateMS: number = new Date(outstanding.lastDevComment.created_at).getTime();
+          const cacheEntries = Object.keys(issues)
+            .filter(key => issues[key].number === currentIssue.number)
+            .map(key => ({
+              key,
+              cacheEntry: {
+                ...issues[key],
+                lastCommentResponseMS: commentDateMS,
+              },
+            }));
+
+          cacheEntries.forEach(entry => {
+            onSetUpdateDetails(entry.key, entry.cacheEntry);
+          });
         }
+
+        let removeFiles: string[];
+        if (feedbackFiles !== undefined) {
+          removeFiles = Object.keys(feedbackFiles)
+            .filter(fileId => ['State', 'Dump', 'LogCopy'].indexOf(feedbackFiles[fileId].type) !== -1)
+            .map(fileId => feedbackFiles[fileId].filePath);
+        }
+
+        if (removeFiles !== undefined) {
+          Promise.each(removeFiles, removeFile => fs.removeAsync(removeFile))
+            .catch(innerErr => {
+              onShowError('An error occurred removing temporary feedback files',
+                innerErr, notificationId);
+
+              return Promise.resolve();
+            });
+        }
+
+        const filteredOut = outstandingIssues.filter(iss =>
+          iss.issue.number !== currentIssue.number);
+        onDismissNotification(notificationId);
+        onSetOustandingIssues(filteredOut);
+
+        if (filteredOut.length === 0) {
+          // Close if no issues remaining
+          onOpen(false);
+        }
+
         this.clear();
-        onOpen(false);
-        return;
-      } else {
-        this.context.api.sendNotification({
-          type: 'success',
-          message: 'Feedback response sent successfully',
-          displayMS: 3000,
-        });
-
-        const outstanding = outstandingIssues.find(iss =>
-          iss.issue.number === currentIssue.number);
-
-        const commentDateMS: number = new Date(outstanding.lastDevComment.created_at).getTime();
-        const cacheEntries = Object.keys(issues)
-          .filter(key => issues[key].number === currentIssue.number)
-          .map(key => ({
-            key,
-            cacheEntry: {
-              ...issues[key],
-              lastCommentResponseMS: commentDateMS,
-            },
-          }));
-
-        cacheEntries.forEach(entry => {
-          onSetUpdateDetails(entry.key, entry.cacheEntry);
-        });
-      }
-
-      let removeFiles: string[];
-      if (feedbackFiles !== undefined) {
-        removeFiles = Object.keys(feedbackFiles)
-          .filter(fileId => ['State', 'Dump', 'LogCopy'].indexOf(feedbackFiles[fileId].type) !== -1)
-          .map(fileId => feedbackFiles[fileId].filePath);
-      }
-
-      if (removeFiles !== undefined) {
-        Promise.each(removeFiles, removeFile => fs.removeAsync(removeFile))
-          .catch(innerErr => {
-            onShowError('An error occurred removing temporary feedback files',
-              innerErr, notificationId);
-
-            return Promise.resolve();
-        });
-      }
-
-      const filteredOut = outstandingIssues.filter(iss =>
-        iss.issue.number !== currentIssue.number);
-      onDismissNotification(notificationId);
-      onSetOustandingIssues(filteredOut);
-
-      if (filteredOut.length === 0) {
-        // Close if no issues remaining
-        onOpen(false);
-      }
-
-      this.clear();
-    });
+      });
   }
   private clear() {
     this.nextState.feedbackFiles = {};
@@ -651,7 +656,7 @@ function mapDispatchToProps(dispatch: any): IActionProps {
     onSetUpdateDetails: (issueId: string, details: IGithubIssueCache) =>
       dispatch(setUpdateDetails(issueId, details)),
     onShowError: (message: string, details?: string | Error,
-                  notificationId?: string, allowReport?: boolean) =>
+      notificationId?: string, allowReport?: boolean) =>
       util.showError(dispatch, message, details, { id: notificationId, allowReport }),
     onSetOustandingIssues: (issues: IOutstandingIssue[]) =>
       dispatch(setOutstandingIssues(issues)),

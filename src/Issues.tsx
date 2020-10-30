@@ -99,7 +99,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
         <tooltip.IconButton
           className='issues-responder'
           icon='feedback'
-          tooltip={t('Issue Responder')}
+          tooltip={t('Open Issue Responder')}
           onClick={this.openResponder}
         />
         <div className='list-issues-container'>
