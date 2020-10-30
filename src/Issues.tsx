@@ -17,8 +17,10 @@ import { connect } from 'react-redux';
 import { actions, ComponentEx, Dashlet, log, Spinner, tooltip, types, util } from 'vortex-api';
 import * as va from 'vortex-api';
 
-import { cacheEntry, getLastDevComment,
-  isFeedbackRequiredLabel, requestFromApi } from './util';
+import {
+  cacheEntry, getLastDevComment,
+  isFeedbackRequiredLabel, requestFromApi
+} from './util';
 
 const { EmptyPlaceholder } = va as any;
 
@@ -44,7 +46,7 @@ interface IActionProps {
   onUpdateIssueList: (issueIds: string[]) => void;
   onSetUpdateDetails: (issueId: string, details: IGithubIssueCache) => void;
   onShowDialog: (type: types.DialogType, title: string, content: types.IDialogContent,
-                 actions: types.DialogActions) => void;
+    actions: types.DialogActions) => void;
   onOpenFeedbackResponder: (open: boolean) => void;
   onSetOustandingIssues: (issues: IOutstandingIssue[]) => void;
 }
@@ -61,7 +63,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
   // hide closed issues without any update after a month
   private static HIDE_AFTER = 30 * 24 * 60 * 60 * 1000;
   // allow refresh once every minute. This is mostly to prevent people from spamming the button
-  private static MIN_REFRESH_DELAY = 60 * 1000;
+  private static MIN_REFRESH_DELAY = process.env.NODE_ENV === 'development' ? 0 : 60 * 1000;
   private mMounted: boolean = false;
   private mLastRefresh: number = 0;
 
@@ -163,7 +165,8 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
                   .toLocaleDateString(this.context.api.locale()),
               },
             }),
-        } });
+        }
+      });
 
     return (
       <tooltip.IconButton
@@ -230,8 +233,8 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
 
     const sorted = Object.keys(issues)
       .filter(id => (issues[id].state !== 'closed')
-                 || (now - issues[id].closedTime < IssueList.HIDE_AFTER)
-                 || (now - issues[id].lastUpdated < IssueList.HIDE_AFTER))
+        || (now - issues[id].closedTime < IssueList.HIDE_AFTER)
+        || (now - issues[id].lastUpdated < IssueList.HIDE_AFTER))
       .sort((lhs, rhs) => issues[rhs].lastUpdated - issues[lhs].lastUpdated);
 
     const distinct = [].concat([...new Set(sorted.map(id => {
@@ -275,12 +278,12 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
 
   private requestIssue(issueId: string): Promise<IGithubIssue> {
     return requestFromApi(this.issueURL(issueId))
-    .then((issue: IGithubIssue) =>
-      // if the issue is labeled a duplicate, show the referenced issue
-      // instead
-      (issue.labels.find(label => label.name === 'duplicate') !== undefined)
-        ? this.followDuplicate(issue)
-        : issue);
+      .then((issue: IGithubIssue) =>
+        // if the issue is labeled a duplicate, show the referenced issue
+        // instead
+        (issue.labels.find(label => label.name === 'duplicate') !== undefined)
+          ? this.followDuplicate(issue)
+          : issue);
   }
 
   private followDuplicate(issue: IGithubIssue): Promise<IGithubIssue> {
@@ -314,7 +317,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
 
   private updateIssues(force: boolean) {
     const { t, issues, onOpenFeedbackResponder, onSetUpdateDetails,
-            onSetOustandingIssues, onUpdateIssueList } = this.props;
+      onSetOustandingIssues, onUpdateIssueList } = this.props;
     if (Date.now() - this.mLastRefresh < IssueList.MIN_REFRESH_DELAY) {
       return;
     }
@@ -330,61 +333,61 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
         const outstanding: IOutstandingIssue[] = [];
         return Promise.mapSeries(filteredRes.map(issue =>
           issue.issue_number.toString()), issueId => {
-          if (force
+            if (force
               || (issues[issueId] === undefined)
               || (issues[issueId].cacheTime === undefined)
               || ((now - issues[issueId].cacheTime) > UPDATE_FREQUENCY)) {
-            return this.requestIssue(issueId)
-              .then(issue => {
-                const lastCommentResponseMS = util.getSafe(issues,
-                  [issueId, 'lastCommentResponseMS'], 0);
-                const replyRequired = issue.labels.find(lbl =>
-                  isFeedbackRequiredLabel(lbl.name)) !== undefined;
+              return this.requestIssue(issueId)
+                .then(issue => {
+                  const lastCommentResponseMS = util.getSafe(issues,
+                    [issueId, 'lastCommentResponseMS'], 0);
+                  const replyRequired = issue.labels.find(lbl =>
+                    isFeedbackRequiredLabel(lbl.name)) !== undefined;
 
-                const isClosed = issue.state === 'closed';
+                  const isClosed = issue.state === 'closed';
 
-                return getLastDevComment(issue)
-                  .then((comment: IGithubComment) => {
-                    if (comment !== undefined) {
-                      const commentDate = new Date(comment.updated_at);
-                      if (replyRequired
-                      && !isClosed
-                      && (lastCommentResponseMS < commentDate.getTime())
-                      && (outstanding.find(out => out.issue.number === issue.number) === undefined)) {
-                        // Only add this if we confirm that:
-                        //  1. The waiting for response label is set.
-                        //  2. The issue is still open.
-                        //  3. The latest comment's date is more recent than the date of the
-                        //     comment to which the user has responded last.
-                        //  4. The issue number isn't already added in the outstanding list.
-                        //     This will happen if the user had opened 2 different issues and
-                        //      we closed one of them as a duplicate of the other.
-                        outstanding.push({ issue, lastDevComment: comment });
+                  return getLastDevComment(issue)
+                    .then((comment: IGithubComment) => {
+                      if (comment !== undefined) {
+                        const commentDate = new Date(comment.updated_at);
+                        if (replyRequired
+                          && !isClosed
+                          && (lastCommentResponseMS < commentDate.getTime())
+                          && (outstanding.find(out => out.issue.number === issue.number) === undefined)) {
+                          // Only add this if we confirm that:
+                          //  1. The waiting for response label is set.
+                          //  2. The issue is still open.
+                          //  3. The latest comment's date is more recent than the date of the
+                          //     comment to which the user has responded last.
+                          //  4. The issue number isn't already added in the outstanding list.
+                          //     This will happen if the user had opened 2 different issues and
+                          //      we closed one of them as a duplicate of the other.
+                          outstanding.push({ issue, lastDevComment: comment });
+                        }
                       }
-                    }
 
-                    onSetUpdateDetails(issueId, cacheEntry(issue, lastCommentResponseMS));
-                    return Promise.resolve();
-                  });
+                      onSetUpdateDetails(issueId, cacheEntry(issue, lastCommentResponseMS));
+                      return Promise.resolve();
+                    });
+                });
+            }
+          })
+          .then(() => {
+            if (outstanding.length > 0) {
+              onOpenFeedbackResponder(true);
+              onSetOustandingIssues(outstanding);
+            }
+          })
+          .catch(err => {
+            if (err.message.includes('Status Code: 403') && force) {
+              this.context.api.sendNotification({
+                message: t('Sent too many github API requests - try again later'),
+                type: 'info',
+                displayMS: 3000,
               });
-          }
-        })
-        .then(() => {
-          if (outstanding.length > 0) {
-            onOpenFeedbackResponder(true);
-            onSetOustandingIssues(outstanding);
-          }
-        })
-        .catch(err => {
-          if (err.message.includes('Status Code: 403') && force) {
-            this.context.api.sendNotification({
-              message: t('Sent too many github API requests - try again later'),
-              type: 'info',
-              displayMS: 3000,
-            });
-          }
-          log('warn', 'Failed to retrieve github issues', err);
-        });
+            }
+            log('warn', 'Failed to retrieve github issues', err);
+          });
       })
       .catch(err => {
         if (err instanceof util.ProcessCanceled) {
