@@ -270,7 +270,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
     const { t } = this.props;
     const { feedbackFiles } = this.state;
     return (
-      <div className="file-list-element">
+      <div className='file-list-element'>
         <p style={{ display: 'inline' }}>
           {feedbackFiles[feedbackFile].filename}
         </p>
@@ -366,6 +366,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
         <MenuItem eventKey='settings'>{t('Application Settings')}</MenuItem>
         <MenuItem eventKey='state'>{t('Application State')}</MenuItem>
         <MenuItem eventKey='actions'>{t('Recent State Changes')}</MenuItem>
+        <MenuItem eventKey='custom'>{t('Attach File')}</MenuItem>
       </DropdownButton>
     );
   }
@@ -441,6 +442,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
       case 'session': this.attachState('session', 'Vortex Session'); break;
       case 'settings': this.attachState('settings', 'Vortex Settings'); break;
       case 'state': this.attachState('persistent', 'Vortex State'); break;
+      case 'custom': this.openFileBrowser(); break;
     }
   }
 
@@ -450,6 +452,29 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
       'Memory: ' + util.bytesToString((process as any).getSystemMemoryInfo().total * 1024),
       'System: ' + `${os.platform()} ${process.arch} (${os.release()})`,
     ].join('\n');
+  }
+
+  private openFileBrowser() {
+    return this.context.api.selectFile({
+      title: this.context.api.translate('Select file to attach'),
+    })
+    .then((selectedPath) => fs.statAsync(selectedPath)
+      .then(stat => {
+        this.addFeedbackFile({
+          filename: path.basename(selectedPath),
+          filePath: selectedPath,
+          size: stat.size,
+          type: 'Custom attachment',
+        });
+      }))
+    .catch(err => {
+      if (err.code === 'ERR_INVALID_ARG_TYPE') {
+        // User canceled or selected nothing.
+        return Promise.resolve();
+      }
+      this.context.api.showErrorNotification('Unable to attach file', err.message,
+        { allowReport: false });
+    });
   }
 
   private attachState(stateKey: string, name: string) {
