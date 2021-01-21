@@ -13,7 +13,7 @@ const sessionReducer: types.IReducerSpec = {
   },
   defaults: {
     feedbackResponderOpen: false,
-    oustandingIssues: [],
+    oustandingIssues: null,
   },
 };
 

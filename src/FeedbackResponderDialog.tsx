@@ -5,14 +5,15 @@ import * as path from 'path';
 import * as React from 'react';
 import {
   Alert, DropdownButton, FormControl, FormGroup, ListGroup,
-  ListGroupItem, MenuItem, Panel
+  ListGroupItem, MenuItem, Panel,
 } from 'react-bootstrap';
 import { withTranslation } from 'react-i18next';
+import ReactMarkdown from 'react-markdown';
 import { connect } from 'react-redux';
 
 import {
   actions, ComponentEx, EmptyPlaceholder, FlexLayout, fs, Modal,
-  tooltip, util
+  tooltip, util,
 } from 'vortex-api';
 
 import { file as tmpFile } from 'tmp';
@@ -50,7 +51,7 @@ interface IActionProps {
   onDismissNotification: (id: string) => void;
   onSetUpdateDetails: (issueId: string, details: IGithubIssueCache) => void;
   onShowError: (message: string, details?: string | Error,
-    notificationId?: string, allowReport?: boolean) => void;
+                notificationId?: string, allowReport?: boolean) => void;
 }
 
 type IProps = IConnectedProps & IActionProps;
@@ -82,7 +83,9 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
 
   public UNSAFE_componentWillReceiveProps(newProps: IConnectedProps) {
     const { currentIssue } = this.state;
-    if (currentIssue === undefined && newProps.outstandingIssues.length > 0) {
+    if ((currentIssue === undefined)
+        && (newProps.outstandingIssues !== null)
+        && (newProps.outstandingIssues.length > 0)) {
       // We assume that this component will open if we correctly
       //  identified an outstanding issue.
       this.nextState.currentIssue = newProps.outstandingIssues[0].issue;
@@ -91,67 +94,9 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
 
   public render(): JSX.Element {
     const { t, open } = this.props;
-    const { currentIssue, feedbackFiles, randomCompliment } = this.state;
 
     const messageValid = this.validateMessage();
     const maySend = (messageValid === undefined);
-
-    const renderFeedbackFiles = () => (feedbackFiles !== undefined)
-      ? Object.keys(feedbackFiles).map((key, idx) => this.renderFeedbackFile(key, idx))
-      : null;
-
-    const buttons = (currentIssue !== undefined)
-      ?
-      [(
-        <FlexLayout.Fixed key='attach-button'>
-          {this.renderAttachButton()}
-        </FlexLayout.Fixed>
-      ),
-      (
-        <FlexLayout.Fixed key='files-list'>
-          {this.renderFilesArea(maySend)}
-        </FlexLayout.Fixed>
-      )]
-      : [(
-        <FlexLayout.Fixed key='close-responder-button'>
-          <tooltip.Button
-            style={{ display: 'block', marginLeft: 'auto', marginRight: 0 }}
-            id='btn-close-responder'
-            tooltip={t('Close')}
-            onClick={this.close}
-          >
-            {t('Close')}
-          </tooltip.Button>
-        </FlexLayout.Fixed>
-      )];
-
-    const renderBody = () => currentIssue !== undefined ? (
-      <FlexLayout type='row'>
-        {this.renderIssueSelection()}
-        <FlexLayout type='column'>
-          <FlexLayout.Fixed>
-            {this.renderLatestComment()}
-            {this.renderResponderContent(messageValid)}
-          </FlexLayout.Fixed>
-        </FlexLayout>
-      </FlexLayout>
-    ) : (
-        <div className='responder-place-holder'>
-          <EmptyPlaceholder
-            icon='report'
-            text={t('No Feedback Response Required')}
-            subtext={t(`Our feedback to you: "${randomCompliment}"`)}
-          />
-        </div>
-      );
-
-    const renderFeedFiles = () => (
-      <FlexLayout type='column'>
-        <ListGroup className='feedback-files'>
-          {renderFeedbackFiles()}
-        </ListGroup>
-      </FlexLayout>
-    );
 
     return (
       <Modal
@@ -165,20 +110,92 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {renderBody()}
+          {this.renderBody(messageValid)}
         </Modal.Body>
         <Modal.Footer>
-          <FlexLayout type='row'>
-            <FlexLayout.Fixed style={{ width: '80%' }}>
-              {renderFeedFiles()}
-            </FlexLayout.Fixed>
-            <FlexLayout.Fixed style={{ width: '20%' }}>
-              {buttons.map(button => button)}
-            </FlexLayout.Fixed>
-          </FlexLayout>
+          {this.renderFooter(maySend)}
         </Modal.Footer>
       </Modal>
     );
+  }
+
+  private renderFeedbackFiles() {
+    const { feedbackFiles } = this.state;
+
+    return (feedbackFiles !== undefined)
+      ? Object.keys(feedbackFiles).map((key, idx) => this.renderFeedbackFile(key, idx))
+      : null;
+  }
+
+  private renderBody(messageValid: string) {
+    const { t, outstandingIssues } = this.props;
+    const { currentIssue, randomCompliment } = this.state;
+
+    if (outstandingIssues === null) {
+      return (
+        <EmptyPlaceholder
+          icon='report'
+          text={t('Issue details could not be fetched yet')}
+          fill
+        />
+      );
+    } else if (currentIssue !== undefined) {
+      const outstanding = outstandingIssues.find(out => out.issue.number === currentIssue.number);
+      return (
+        <FlexLayout type='row'>
+          {this.renderIssueSelection()}
+          <FlexLayout type='column'>
+            <FlexLayout.Fixed>
+              <h5>
+                {outstanding?.lastDevComment?.user?.login} {t('has responded')}:
+              </h5>
+            </FlexLayout.Fixed>
+            <FlexLayout.Flex>
+              <Panel className='responder-developer-comment'>
+                <ReactMarkdown source={outstanding?.lastDevComment?.body} />
+              </Panel>
+            </FlexLayout.Flex>
+            <FlexLayout.Fixed>
+              <h5>
+                {t('Your response to')} #{currentIssue.number}
+              </h5>
+            </FlexLayout.Fixed>
+            <FlexLayout.Fixed>{this.renderMessageArea()}</FlexLayout.Fixed>
+            <FlexLayout.Fixed>
+              {messageValid !== undefined ? (
+                <p key='error-message' className='error-message'>
+                  {messageValid}
+                </p>
+              ) : null}
+            </FlexLayout.Fixed>
+            <FlexLayout.Fixed>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '33% 34% 33%',
+                }}
+              >
+                {this.renderFeedbackFiles()}
+              </div>
+            </FlexLayout.Fixed>
+            <FlexLayout.Fixed>
+              {this.renderAttachButton()}
+            </FlexLayout.Fixed>
+          </FlexLayout>
+        </FlexLayout>
+      );
+    } else {
+      return (
+        <div className='responder-place-holder'>
+          <EmptyPlaceholder
+            icon='report'
+            text={t('No Feedback Response Required')}
+            subtext={t(`Our feedback to you: "${randomCompliment}"`)}
+            fill
+          />
+        </div>
+      );
+    }
   }
 
   private select = (evt) => {
@@ -239,33 +256,6 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
     );
   }
 
-  private renderLatestComment(): JSX.Element {
-    const { currentIssue } = this.nextState;
-    const { outstandingIssues } = this.props;
-
-    const renderComment = (comment: IGithubComment) => (
-      <div>
-        <FlexLayout
-          fill={false}
-          type='column'
-          style={{ marginLeft: '5px' }}
-        >
-          <h5>{comment.user.login} has responded:</h5>
-          <Panel className='responder-developer-comment'>
-            <FlexLayout.Flex>
-              <p>"{comment.body}"</p>
-            </FlexLayout.Flex>
-          </Panel>
-        </FlexLayout>
-      </div>
-    );
-
-    const outstanding = outstandingIssues.find(out => out.issue.number === currentIssue.number);
-    return (outstanding !== undefined) ? (
-      renderComment(outstanding.lastDevComment)
-    ) : null;
-  }
-
   private renderFeedbackFile = (feedbackFile: string, idx: number) => {
     const { t } = this.props;
     const { feedbackFiles } = this.state;
@@ -302,41 +292,6 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
     }, {});
   }
 
-  private renderResponderContent = (messageValid: string) => {
-    const { t } = this.props;
-    const { currentIssue } = this.nextState;
-
-    if (currentIssue === undefined) {
-      return null;
-    }
-
-    const errMessage = () => (messageValid !== undefined)
-      ? <p key='error-message' className='error-message'>
-        {messageValid}
-      </p>
-      : null;
-
-    const fields = [
-      (
-        <FlexLayout.Fixed key='title-input' style={{ marginLeft: '5px' }}>
-          <h5>{t(`Your response to #${currentIssue.number}`)}</h5>
-        </FlexLayout.Fixed>
-      ), (
-        <FlexLayout.Fixed key='message-input'>
-          {this.renderMessageArea()}
-        </FlexLayout.Fixed>
-      ), (
-        errMessage()
-      ),
-    ];
-
-    return (
-      <FlexLayout type='column'>
-        {fields.map(field => field)}
-      </FlexLayout>
-    );
-  }
-
   private validateMessage(): string {
     const { t } = this.props;
     const { feedbackMessage } = this.state;
@@ -371,14 +326,14 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
     );
   }
 
-  private renderFilesArea(valid: boolean): JSX.Element {
+  private renderFooter(valid: boolean): JSX.Element {
     const { t, APIKey } = this.props;
     const { anonymous, feedbackMessage, sending } = this.state;
 
     const anon = anonymous || (APIKey === undefined);
     return (
       <FlexLayout fill={false} type='row' className='feedback-controls'>
-        <FlexLayout.Fixed>
+        <FlexLayout.Flex>
           {(APIKey === undefined) ? (
             <Alert bsStyle='warning'>
               {t('You are not logged in. Please include your username in your message to give us a '
@@ -390,6 +345,16 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
                 + 'or enquire for more details.')}
             </Alert>
           ) : null}
+        </FlexLayout.Flex>
+        <FlexLayout.Fixed>
+          <tooltip.Button
+            style={{ display: 'block', marginLeft: 'auto', marginRight: 0 }}
+            id='btn-close-responder'
+            tooltip={t('Close')}
+            onClick={this.close}
+          >
+            {t('Close')}
+          </tooltip.Button>
         </FlexLayout.Fixed>
         <FlexLayout.Fixed>
           <tooltip.Button
@@ -564,8 +529,8 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
 
   private doSubmitFeedback() {
     const { APIKey, onOpen, onSetOustandingIssues,
-      onSetUpdateDetails, onShowError, onDismissNotification,
-      onShowActivity, outstandingIssues, issues } = this.props;
+            onSetUpdateDetails, onShowError, onDismissNotification,
+            onShowActivity, outstandingIssues, issues } = this.props;
 
     const { feedbackMessage, feedbackFiles, currentIssue } = this.state;
 
@@ -630,7 +595,8 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
         let removeFiles: string[];
         if (feedbackFiles !== undefined) {
           removeFiles = Object.keys(feedbackFiles)
-            .filter(fileId => ['State', 'Dump', 'LogCopy'].indexOf(feedbackFiles[fileId].type) !== -1)
+            .filter(fileId =>
+              ['State', 'Dump', 'LogCopy'].indexOf(feedbackFiles[fileId].type) !== -1)
             .map(fileId => feedbackFiles[fileId].filePath);
         }
 
@@ -667,7 +633,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
 function mapStateToProps(state: any): IConnectedProps {
   return {
     issues: util.getSafe(state, ['persistent', 'issues', 'issues'], {}),
-    outstandingIssues: util.getSafe(state, ['session', 'issues', 'oustandingIssues'], []),
+    outstandingIssues: util.getSafe(state, ['session', 'issues', 'oustandingIssues'], null),
     APIKey: state.confidential.account.nexus.APIKey,
     open: util.getSafe(state, ['session', 'issues', 'feedbackResponderOpen'], false),
   };
@@ -681,7 +647,7 @@ function mapDispatchToProps(dispatch: any): IActionProps {
     onSetUpdateDetails: (issueId: string, details: IGithubIssueCache) =>
       dispatch(setUpdateDetails(issueId, details)),
     onShowError: (message: string, details?: string | Error,
-      notificationId?: string, allowReport?: boolean) =>
+                  notificationId?: string, allowReport?: boolean) =>
       util.showError(dispatch, message, details, { id: notificationId, allowReport }),
     onSetOustandingIssues: (issues: IOutstandingIssue[]) =>
       dispatch(setOutstandingIssues(issues)),

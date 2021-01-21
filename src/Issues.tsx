@@ -9,9 +9,10 @@ import { IIssue } from '@nexusmods/nexus-api';
 import Promise from 'bluebird';
 
 import * as React from 'react';
-import { Button } from 'react-bootstrap';
+import { Button, OverlayTrigger, Popover } from 'react-bootstrap';
 import * as ReactDOM from 'react-dom';
 import { withTranslation } from 'react-i18next';
+import ReactMarkdown from 'react-markdown';
 import { connect } from 'react-redux';
 
 import { actions, ComponentEx, Dashlet, log, Spinner, tooltip, types, util } from 'vortex-api';
@@ -19,7 +20,7 @@ import * as va from 'vortex-api';
 
 import {
   cacheEntry, getLastDevComment,
-  isFeedbackRequiredLabel, requestFromApi
+  isFeedbackRequiredLabel, requestFromApi,
 } from './util';
 
 const { EmptyPlaceholder } = va as any;
@@ -46,7 +47,7 @@ interface IActionProps {
   onUpdateIssueList: (issueIds: string[]) => void;
   onSetUpdateDetails: (issueId: string, details: IGithubIssueCache) => void;
   onShowDialog: (type: types.DialogType, title: string, content: types.IDialogContent,
-    actions: types.DialogActions) => void;
+                 actions: types.DialogActions) => void;
   onOpenFeedbackResponder: (open: boolean) => void;
   onSetOustandingIssues: (issues: IOutstandingIssue[]) => void;
 }
@@ -55,6 +56,7 @@ type IProps = IConnectedProps & IActionProps;
 
 interface IIssueListState {
   updating: boolean;
+  descriptionOpen: string;
 }
 
 class IssueList extends ComponentEx<IProps, IIssueListState> {
@@ -72,6 +74,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
 
     this.initState({
       updating: false,
+      descriptionOpen: null,
     });
   }
 
@@ -165,7 +168,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
                   .toLocaleDateString(this.context.api.locale()),
               },
             }),
-        }
+        },
       });
 
     return (
@@ -184,7 +187,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
     );
   }
 
-  private renderIssue = (issue: IGithubIssueCache) => {
+  private renderIssue = (issueId: string, issue: IGithubIssueCache) => {
     const { t } = this.props;
     if (issue?.number === undefined) {
       return null;
@@ -193,6 +196,12 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
     // Find all labels that require feedback from the reporter/user
     const feedbackRequiredLabels =
       issue.labels.filter(label => isFeedbackRequiredLabel(label));
+
+    const popover = (
+      <Popover id={`issue-popover-${issueId}`}>
+        <ReactMarkdown className='issue-description' source={issue.body} />
+      </Popover>
+    );
 
     return (
       <div key={issue.number.toString()} className='issue-item'>
@@ -208,13 +217,17 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
           {feedbackRequiredLabels.length > 0 ? this.renderLabel(feedbackRequiredLabels[0]) : null}
         </div>
         <div className='issue-item-title'>
-          <a
-            data-issue={issue.number.toString()}
-            title={issue.body}
-            onClick={this.openIssue}
+          <OverlayTrigger
+            trigger={['hover', 'focus']}
+            overlay={popover}
           >
-            {issue.title}
-          </a>
+            <a
+              data-issue={issue.number.toString()}
+              onClick={this.openIssue}
+            >
+              {issue.title}
+            </a>
+          </OverlayTrigger>
         </div>
         <div className='issue-item-comments'>
           {t('{{ count }} comments', { count: issue.comments })}
@@ -252,7 +265,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
 
     return (
       <div className='list-issues'>
-        {distinct.map(id => this.renderIssue(issues[id]))}
+        {distinct.map(id => this.renderIssue(id, issues[id]))}
       </div>
     );
   }
@@ -309,7 +322,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
 
   private openResponder = () => {
     const { onOpenFeedbackResponder, outstandingIssues } = this.props;
-    if (outstandingIssues.length === 0) {
+    if ((outstandingIssues === null) || (outstandingIssues.length === 0)) {
       this.updateIssues(true);
     }
     onOpenFeedbackResponder(true);
@@ -317,7 +330,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
 
   private updateIssues(force: boolean) {
     const { t, issues, onOpenFeedbackResponder, onSetUpdateDetails,
-      onSetOustandingIssues, onUpdateIssueList } = this.props;
+            onSetOustandingIssues, onUpdateIssueList } = this.props;
     if (Date.now() - this.mLastRefresh < IssueList.MIN_REFRESH_DELAY) {
       return;
     }
@@ -331,47 +344,47 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
         onUpdateIssueList(filteredRes.map(issue => issue.issue_number.toString()));
         const now = Date.now();
         const outstanding: IOutstandingIssue[] = [];
-        return Promise.mapSeries(filteredRes.map(issue =>
-          issue.issue_number.toString()), issueId => {
-            if (force
-              || (issues[issueId] === undefined)
-              || (issues[issueId].cacheTime === undefined)
-              || ((now - issues[issueId].cacheTime) > UPDATE_FREQUENCY)) {
-              return this.requestIssue(issueId)
-                .then(issue => {
-                  const lastCommentResponseMS = util.getSafe(issues,
-                    [issueId, 'lastCommentResponseMS'], 0);
-                  const replyRequired = issue.labels.find(lbl =>
-                    isFeedbackRequiredLabel(lbl.name)) !== undefined;
+        return Promise.mapSeries(filteredRes, issue => {
+          const issueId = issue.issue_number.toString();
+          if (force
+            || (issues[issueId] === undefined)
+            || (issues[issueId].cacheTime === undefined)
+            || ((now - issues[issueId].cacheTime) > UPDATE_FREQUENCY)) {
+            return this.requestIssue(issueId)
+              .then(issueDetails => {
+                const lastCommentResponseMS = util.getSafe(issues,
+                  [issueId, 'lastCommentResponseMS'], 0);
+                const replyRequired = issueDetails.labels.find(lbl =>
+                  isFeedbackRequiredLabel(lbl.name)) !== undefined;
 
-                  const isClosed = issue.state === 'closed';
+                const isClosed = issueDetails.state === 'closed';
 
-                  return getLastDevComment(issue)
-                    .then((comment: IGithubComment) => {
-                      if (comment !== undefined) {
-                        const commentDate = new Date(comment.updated_at);
-                        if (replyRequired
-                          && !isClosed
-                          && (lastCommentResponseMS < commentDate.getTime())
-                          && (outstanding.find(out => out.issue.number === issue.number) === undefined)) {
-                          // Only add this if we confirm that:
-                          //  1. The waiting for response label is set.
-                          //  2. The issue is still open.
-                          //  3. The latest comment's date is more recent than the date of the
-                          //     comment to which the user has responded last.
-                          //  4. The issue number isn't already added in the outstanding list.
-                          //     This will happen if the user had opened 2 different issues and
-                          //      we closed one of them as a duplicate of the other.
-                          outstanding.push({ issue, lastDevComment: comment });
-                        }
+                return getLastDevComment(issueDetails)
+                  .then((comment: IGithubComment) => {
+                    if (comment !== undefined) {
+                      const commentDate = new Date(comment.updated_at);
+                      if (replyRequired
+                        && !isClosed
+                        && (lastCommentResponseMS < commentDate.getTime())
+                        && (outstanding.find(out => out.issue.number === issueDetails.number)
+                              === undefined)) {
+                        // Only add this if we confirm that:
+                        //  1. The waiting for response label is set.
+                        //  2. The issue is still open.
+                        //  3. The latest comment's date is more recent than the date of the
+                        //     comment to which the user has responded last.
+                        //  4. The issue number isn't already added in the outstanding list.
+                        //     This will happen if the user had opened 2 different issues and
+                        //      we closed one of them as a duplicate of the other.
+                        outstanding.push({ issue: issueDetails, lastDevComment: comment });
                       }
+                    }
 
-                      onSetUpdateDetails(issueId, cacheEntry(issue, lastCommentResponseMS));
-                      return Promise.resolve();
-                    });
-                });
-            }
-          })
+                    onSetUpdateDetails(issueId, cacheEntry(issueDetails, lastCommentResponseMS));
+                    return Promise.resolve();
+                  });
+              });
+          }})
           .then(() => {
             if (outstanding.length > 0) {
               onOpenFeedbackResponder(true);
