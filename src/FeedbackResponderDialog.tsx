@@ -25,7 +25,7 @@ import { openFeedbackResponder, setOutstandingIssues } from './actions/session';
 
 import Promise from 'bluebird';
 
-import { IGithubComment, IGithubIssue, IGithubIssueCache } from './IGithubIssue';
+import { IGithubIssue, IGithubIssueCache } from './IGithubIssue';
 import { IOutstandingIssue } from './types';
 
 import { getCompliment } from './compliments';

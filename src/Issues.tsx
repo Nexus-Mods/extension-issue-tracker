@@ -1,7 +1,7 @@
 import { setUpdateDetails, updateIssueList } from './actions/persistent';
 import { openFeedbackResponder, setOutstandingIssues } from './actions/session';
 
-import { IGithubComment, IGithubIssue, IGithubIssueCache } from './IGithubIssue';
+import { IGithubComment, IGithubCommentCache, IGithubIssue, IGithubIssueCache } from './IGithubIssue';
 
 import { IOutstandingIssue } from './types';
 
@@ -18,14 +18,14 @@ import { connect } from 'react-redux';
 import { actions, ComponentEx, Dashlet, log, Spinner, tooltip, types, util } from 'vortex-api';
 import * as va from 'vortex-api';
 
+import { UPDATE_FREQUENCY } from './statics';
+
 import {
   cacheEntry, getLastDevComment,
   isFeedbackRequiredLabel, requestFromApi,
 } from './util';
 
 const { EmptyPlaceholder } = va as any;
-
-const UPDATE_FREQUENCY = 24 * 60 * 60 * 1000;
 
 function queryIssues(api: types.IExtensionApi): Promise<IIssue[]> {
   return new Promise((resolve, reject) => {
@@ -41,6 +41,7 @@ function queryIssues(api: types.IExtensionApi): Promise<IIssue[]> {
 interface IConnectedProps {
   issues: { [id: string]: IGithubIssueCache };
   outstandingIssues: IOutstandingIssue[];
+  username: string;
 }
 
 interface IActionProps {
@@ -79,7 +80,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
   }
 
   public UNSAFE_componentWillMount() {
-    this.updateIssues(false);
+    //this.updateIssues(false);
   }
 
   public componentDidMount() {
@@ -329,7 +330,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
   }
 
   private updateIssues(force: boolean) {
-    const { t, issues, onOpenFeedbackResponder, onSetUpdateDetails,
+    const { t, username, issues, onOpenFeedbackResponder, onSetUpdateDetails,
             onSetOustandingIssues, onUpdateIssueList } = this.props;
     if (Date.now() - this.mLastRefresh < IssueList.MIN_REFRESH_DELAY) {
       return;
@@ -353,18 +354,22 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
             return this.requestIssue(issueId)
               .then(issueDetails => {
                 const lastCommentResponseMS = util.getSafe(issues,
-                  [issueId, 'lastCommentResponseMS'], 0);
+                  [issueId, 'cachedComment', 'lastCommentResponseMS'], 0);
                 const replyRequired = issueDetails.labels.find(lbl =>
                   isFeedbackRequiredLabel(lbl.name)) !== undefined;
-
                 const isClosed = issueDetails.state === 'closed';
+                const updateIssueDetails = (id: string, cached: IGithubIssueCache) => {
+                  onSetUpdateDetails(id, cached);
+                  return Promise.resolve();
+                };
 
-                return getLastDevComment(issueDetails)
-                  .then((comment: IGithubComment) => {
+                return (isClosed)
+                  ? updateIssueDetails(issueId, cacheEntry(issueDetails, undefined))
+                  : getLastDevComment(issueDetails, issues[issueId], username, force)
+                    .then((comment: IGithubCommentCache) => {
                     if (comment !== undefined) {
-                      const commentDate = new Date(comment.updated_at);
+                      const commentDate = new Date(comment.comment.updated_at);
                       if (replyRequired
-                        && !isClosed
                         && (lastCommentResponseMS < commentDate.getTime())
                         && (outstanding.find(out => out.issue.number === issueDetails.number)
                               === undefined)) {
@@ -376,12 +381,11 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
                         //  4. The issue number isn't already added in the outstanding list.
                         //     This will happen if the user had opened 2 different issues and
                         //      we closed one of them as a duplicate of the other.
-                        outstanding.push({ issue: issueDetails, lastDevComment: comment });
+                        outstanding.push({ issue: issueDetails, lastDevComment: comment.comment });
                       }
                     }
 
-                    onSetUpdateDetails(issueId, cacheEntry(issueDetails, lastCommentResponseMS));
-                    return Promise.resolve();
+                    return updateIssueDetails(issueId, cacheEntry(issueDetails, comment));
                   });
               });
           }})
@@ -420,6 +424,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
 function mapStateToProps(state: any): IConnectedProps {
   return {
     outstandingIssues: util.getSafe(state, ['session', 'issues', 'oustandingIssues'], []),
+    username: util.getSafe(state, ['persistent', 'nexus', 'userInfo', 'name'], undefined),
     issues: state.persistent.issues.issues,
   };
 }

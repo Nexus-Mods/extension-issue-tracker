@@ -95,6 +95,21 @@ export interface IGithubComment {
   body: string;
 }
 
+export interface IGithubCommentCache {
+  // The comment itself duh
+  comment: IGithubComment;
+
+  // Last time that the user responded to the comment
+  //  used to decide whether we're going to harass the user
+  //  by popping up the issue responder.
+  lastCommentResponseMS: number;
+
+  // We want to avoid using up the user's github api calls
+  //  this property defines when we're planning on updating
+  //  the comment next.
+  nextUpdateTimeoutMS: number;
+}
+
 export interface IGithubIssueCache {
   number: number;
   title: string;
@@ -108,5 +123,5 @@ export interface IGithubIssueCache {
   labels: string[];
   lastUpdated: number;
   milestone: IGithubMilestoneCache;
-  lastCommentResponseMS: number;
+  cachedComment: IGithubCommentCache;
 }

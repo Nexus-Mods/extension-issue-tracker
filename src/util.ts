@@ -3,7 +3,9 @@ import { IncomingMessage } from 'http';
 import { get } from 'https';
 import * as url from 'url';
 
-import { IGithubComment, IGithubIssue, IGithubIssueCache } from './IGithubIssue';
+import { UPDATE_FREQUENCY } from './statics';
+
+import { IGithubComment, IGithubCommentCache, IGithubIssue, IGithubIssueCache } from './IGithubIssue';
 
 export function isFeedbackRequiredLabel(label: string): boolean {
   return (['help wanted', 'waiting for reply'].indexOf(label) !== -1);
@@ -11,10 +13,12 @@ export function isFeedbackRequiredLabel(label: string): boolean {
 
 export function isVortexDev(comment: IGithubComment): boolean {
   // TODO: there must be a better way to distinctly identify a staff member
+  //  we could go by organisation, but that would mean having the org set to public
+  //  (which I thought we already had, but I guess I was mistaken)
   return ['TanninOne', 'IDCs'].indexOf(comment.user.login) !== -1;
 }
 
-export function cacheEntry(input: IGithubIssue, lastCommentResponseMS: number): IGithubIssueCache {
+export function cacheEntry(input: IGithubIssue, comment: IGithubCommentCache): IGithubIssueCache {
   return {
     number: input.number,
     closedTime: Date.parse(input.closed_at),
@@ -35,11 +39,30 @@ export function cacheEntry(input: IGithubIssue, lastCommentResponseMS: number): 
       open_issues: input.milestone.open_issues,
       due_on: input.milestone.due_on,
     } : undefined,
-    lastCommentResponseMS,
+    cachedComment: comment,
   };
 }
 
-export function getLastDevComment(issue: IGithubIssue): Promise<IGithubComment> {
+export function getTargetUsers(comment: IGithubComment): string[] {
+  const matched: RegExpMatchArray = comment.body.toLowerCase().match(/@![a-z]*/gm);
+  return (matched !== null)
+    ? matched.map(mat => mat.substr(2))
+    : [];
+}
+
+export function getLastDevComment(
+  issue: IGithubIssue,
+  cache: IGithubIssueCache,
+  nexusUserId: string,
+  forced: boolean = false): Promise<IGithubCommentCache> {
+  const updateFreq = UPDATE_FREQUENCY * 0.5;
+  const now = Date.now();
+  if (!forced
+    &&!!cache?.cachedComment
+    && ((now - cache.cachedComment.nextUpdateTimeoutMS) < updateFreq)) {
+    return Promise.resolve(cache.cachedComment);
+  }
+
   return this.requestFromApi(issue.comments_url)
     .then((comments: IGithubComment[]) => {
       const relevant = comments.filter(isVortexDev);
@@ -47,7 +70,23 @@ export function getLastDevComment(issue: IGithubIssue): Promise<IGithubComment> 
         return Promise.resolve(undefined);
       }
 
-      return Promise.resolve(relevant.reverse()[0]);
+      const lastComment = relevant.reverse().find(comment => {
+        const userIds = getTargetUsers(comment);
+        return ((userIds.length === 0)
+          || (userIds.includes(nexusUserId.toLowerCase())));
+      });
+
+      if (lastComment === undefined) {
+        return Promise.resolve(undefined);
+      }
+
+      const cachedComment: IGithubCommentCache = {
+        comment: lastComment,
+        lastCommentResponseMS: 0,
+        nextUpdateTimeoutMS: now + updateFreq,
+      }
+
+      return Promise.resolve(cachedComment);
     });
 }
 
