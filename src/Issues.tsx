@@ -80,7 +80,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
   }
 
   public UNSAFE_componentWillMount() {
-    //this.updateIssues(false);
+    this.updateIssues(false);
   }
 
   public componentDidMount() {
