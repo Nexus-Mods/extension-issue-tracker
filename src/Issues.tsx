@@ -353,8 +353,6 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
             || ((now - issues[issueId].cacheTime) > UPDATE_FREQUENCY)) {
             return this.requestIssue(issueId)
               .then(issueDetails => {
-                const lastCommentResponseMS = util.getSafe(issues,
-                  [issueId, 'cachedComment', 'lastCommentResponseMS'], 0);
                 const replyRequired = issueDetails.labels.find(lbl =>
                   isFeedbackRequiredLabel(lbl.name)) !== undefined;
                 const isClosed = issueDetails.state === 'closed';
@@ -367,33 +365,38 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
                   ? updateIssueDetails(issueId, cacheEntry(issueDetails, undefined))
                   : getLastDevComment(issueDetails, issues[issueId], username, force)
                     .then((comment: IGithubCommentCache) => {
-                    if (comment !== undefined) {
-                      const commentDate = new Date(comment.comment.updated_at);
-                      if (replyRequired
-                        && (lastCommentResponseMS < commentDate.getTime())
-                        && (outstanding.find(out => out.issue.number === issueDetails.number)
-                              === undefined)) {
-                        // Only add this if we confirm that:
-                        //  1. The waiting for response label is set.
-                        //  2. The issue is still open.
-                        //  3. The latest comment's date is more recent than the date of the
-                        //     comment to which the user has responded last.
-                        //  4. The issue number isn't already added in the outstanding list.
-                        //     This will happen if the user had opened 2 different issues and
-                        //      we closed one of them as a duplicate of the other.
-                        outstanding.push({ issue: issueDetails, lastDevComment: comment.comment });
+                      const cachedEntry = cacheEntry(issueDetails, comment);
+                      if (comment !== undefined) {
+                        const lastResponseMS = cachedEntry.cachedComment.lastCommentResponseMS;
+                        const commentDate = new Date(comment.comment.updated_at);
+                        if (replyRequired
+                          && (lastResponseMS < commentDate.getTime())
+                          && (outstanding.find(out => out.issue.number === issueDetails.number)
+                                === undefined)) {
+                          // Only add this if we confirm that:
+                          //  1. The waiting for response label is set.
+                          //  2. The issue is still open.
+                          //  3. The latest comment's date is more recent than the date of the
+                          //     comment to which the user has responded last.
+                          //  4. The issue number isn't already added in the outstanding list.
+                          //     This will happen if the user had opened 2 different issues and
+                          //      we closed one of them as a duplicate of the other.
+                          outstanding.push({
+                            issue: issueDetails,
+                            lastDevComment: comment.comment,
+                          });
+                        }
                       }
-                    }
 
-                    return updateIssueDetails(issueId, cacheEntry(issueDetails, comment));
+                      return updateIssueDetails(issueId, cachedEntry);
                   });
               });
           }})
           .then(() => {
             if (outstanding.length > 0) {
               onOpenFeedbackResponder(true);
-              onSetOustandingIssues(outstanding);
             }
+            onSetOustandingIssues(outstanding);
           })
           .catch(err => {
             if (err.message.includes('Status Code: 403') && force) {

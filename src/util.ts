@@ -58,7 +58,7 @@ export function getLastDevComment(
   const updateFreq = UPDATE_FREQUENCY * 0.5;
   const now = Date.now();
   if (!forced
-    &&!!cache?.cachedComment
+    && (!!cache?.cachedComment)
     && ((now - cache.cachedComment.nextUpdateTimeoutMS) < updateFreq)) {
     return Promise.resolve(cache.cachedComment);
   }
@@ -80,11 +80,34 @@ export function getLastDevComment(
         return Promise.resolve(undefined);
       }
 
+      const lastCommentUpdatedMS = new Date(lastComment.updated_at).getTime();
+
+      // Check if the user has already responded after our last comment
+      //  it's possible that the user had responded to our comment before,
+      //  but has re-installed Vortex (taking an extra step to erase the state db as well)
+      //  in which case Vortex will raise the issue responder again asking him
+      //  a question he probably already responded to.
+      const reportedByPattern = `Reported by: ${nexusUserId}`.toLowerCase();
+      const lastCommentResponseMS = comments.reduce((newestCommentMS, comment) => {
+        const createdAtMS = new Date(comment.created_at).getTime();
+        if ((comment.user.login === 'VortexFeedback')
+          && (comment.body.toLowerCase().indexOf(reportedByPattern) !== -1)
+          && (lastCommentUpdatedMS < createdAtMS)
+          && (newestCommentMS < createdAtMS)) {
+            // We're looking for all comments created by the vortex feedback system
+            //  that include the "reported by [username]" pattern and have been created
+            //  _after_ our last developer comment. We're only interested in the highest
+            //  value in milliseconds.
+            newestCommentMS = createdAtMS;
+          }
+        return newestCommentMS;
+      }, 0);
+
       const cachedComment: IGithubCommentCache = {
         comment: lastComment,
-        lastCommentResponseMS: 0,
+        lastCommentResponseMS,
         nextUpdateTimeoutMS: now + updateFreq,
-      }
+      };
 
       return Promise.resolve(cachedComment);
     });
