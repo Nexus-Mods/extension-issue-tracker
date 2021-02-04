@@ -325,6 +325,8 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
     const { onOpenFeedbackResponder, outstandingIssues } = this.props;
     if ((outstandingIssues === null) || (outstandingIssues.length === 0)) {
       this.updateIssues(true);
+    } else {
+      this.updateIssues(false);
     }
     onOpenFeedbackResponder(true);
   }
@@ -347,6 +349,16 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
         const outstanding: IOutstandingIssue[] = [];
         return Promise.mapSeries(filteredRes, issue => {
           const issueId = issue.issue_number.toString();
+          const isIssueClosed = !force
+            ? !!issues?.[issueId]?.state
+              ? issues[issueId].state === 'closed'
+              : false
+            : false;
+
+          if (isIssueClosed) {
+            return Promise.resolve();
+          }
+
           if (force
             || (issues[issueId] === undefined)
             || (issues[issueId].cacheTime === undefined)
