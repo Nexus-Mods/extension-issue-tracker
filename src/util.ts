@@ -44,9 +44,9 @@ export function cacheEntry(input: IGithubIssue, comment: IGithubCommentCache): I
 }
 
 export function getTargetUsers(comment: IGithubComment): string[] {
-  const matched: RegExpMatchArray = comment.body.toLowerCase().match(/@![a-z]*/gm);
+  const matched: RegExpMatchArray = comment.body.match(/@!([a-zA-Z0-9]+)/gm);
   return (matched !== null)
-    ? matched.map(mat => mat.substr(2))
+    ? matched.map(mat => mat.substr(2).toLowerCase())
     : [];
 }
 
