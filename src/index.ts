@@ -8,15 +8,15 @@ import * as path from 'path';
 import { types, util } from 'vortex-api';
 
 function main(context: types.IExtensionContext) {
+  context.registerReducer(['persistent', 'issues'], persistentReducer);
+  context.registerReducer(['session', 'issues'], sessionReducer);
+
   context.registerDashlet('Issues', 1, 2, 200, Issues,
     (state: types.IState) =>
       util.getSafe(state, ['confidential', 'account', 'nexus', 'APIKey'], undefined) !== undefined,
   () => ({}), { closable: true });
 
   context.registerDialog('feedback-responder', FeedbackResponderDialog);
-
-  context.registerReducer(['persistent', 'issues'], persistentReducer);
-  context.registerReducer(['session', 'issues'], sessionReducer);
 
   context.once(() => {
     context.api.setStylesheet('issue-tracker',
