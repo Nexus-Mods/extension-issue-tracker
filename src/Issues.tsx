@@ -200,7 +200,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
 
     const popover = (
       <Popover id={`issue-popover-${issueId}`}>
-        <ReactMarkdown className='issue-description' source={issue.body} />
+        <ReactMarkdown className='issue-description'>{issue.body}</ReactMarkdown>
       </Popover>
     );
 

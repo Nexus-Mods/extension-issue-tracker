@@ -152,7 +152,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
             </FlexLayout.Fixed>
             <FlexLayout.Flex>
               <Panel className='responder-developer-comment'>
-                <ReactMarkdown source={outstanding?.lastDevComment?.body} />
+                <ReactMarkdown>{outstanding?.lastDevComment?.body}</ReactMarkdown>
               </Panel>
             </FlexLayout.Flex>
             <FlexLayout.Fixed>
