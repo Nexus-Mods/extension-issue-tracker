@@ -1,4 +1,3 @@
-import { remote } from 'electron';
 import _ from 'lodash';
 import * as os from 'os';
 import * as path from 'path';
@@ -413,7 +412,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
 
   private systemInfo() {
     return [
-      'Vortex Version: ' + remote.app.getVersion(),
+      'Vortex Version: ' + util['getApplication']().version,
       'Memory: ' + util.bytesToString((process as any).getSystemMemoryInfo().total * 1024),
       'System: ' + `${os.platform()} ${process.arch} (${os.release()})`,
     ].join('\n');
@@ -500,14 +499,14 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
 
   private attachNetLog() {
     this.attachFile(
-      path.join(remote.app.getPath('userData'), 'network.log'), 'log');
+      path.join(util.getVortexPath('userData'), 'network.log'), 'log');
   }
 
   private attachLog() {
     this.attachFile(
-      path.join(remote.app.getPath('userData'), 'vortex.log'), 'log');
+      path.join(util.getVortexPath('userData'), 'vortex.log'), 'log');
     this.attachFile(
-      path.join(remote.app.getPath('userData'), 'vortex1.log'), 'log');
+      path.join(util.getVortexPath('userData'), 'vortex1.log'), 'log');
   }
 
   private addFeedbackFile(file: IFeedbackFile) {
