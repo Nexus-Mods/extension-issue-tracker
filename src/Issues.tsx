@@ -196,7 +196,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
 
     // Find all labels that require feedback from the reporter/user
     const feedbackRequiredLabels =
-      issue.labels.filter(label => isFeedbackRequiredLabel(label));
+      (issue.labels ?? []).filter(label => isFeedbackRequiredLabel(label));
 
     const popover = (
       <Popover id={`issue-popover-${issueId}`}>
