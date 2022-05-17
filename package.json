@@ -1,6 +1,6 @@
 {
   "name": "issue-tracker",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Track issues you reported on the dashboard",
   "main": "./out/index.js",
   "repository": "",

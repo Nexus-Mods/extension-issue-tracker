@@ -63,7 +63,7 @@ export function getLastDevComment(
     return Promise.resolve(cache.cachedComment);
   }
 
-  return this.requestFromApi(issue.comments_url)
+  return requestFromApi(issue.comments_url)
     .then((comments: IGithubComment[]) => {
       const relevant = comments.filter(isVortexDev);
       if (relevant.length === 0) {

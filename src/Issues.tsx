@@ -346,7 +346,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
         const filteredRes = res.filter(issue => !issue.issue_title.startsWith('Response to #'));
         onUpdateIssueList(filteredRes.map(issue => issue.issue_number.toString()));
         const now = Date.now();
-        const outstanding: IOutstandingIssue[] = [];
+        let outstanding: IOutstandingIssue[] = force ? [] : this.props.outstandingIssues;
         return Promise.mapSeries(filteredRes, issue => {
           const issueId = issue.issue_number.toString();
           const isIssueClosed = !force
@@ -381,18 +381,12 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
                       if (comment !== undefined) {
                         const lastResponseMS = cachedEntry.cachedComment.lastCommentResponseMS;
                         const commentDate = new Date(comment.comment.updated_at);
-                        if (replyRequired
-                          && (lastResponseMS < commentDate.getTime())
-                          && (outstanding.find(out => out.issue.number === issueDetails.number)
-                                === undefined)) {
+                        if (replyRequired && (lastResponseMS < commentDate.getTime())) {
                           // Only add this if we confirm that:
                           //  1. The waiting for response label is set.
                           //  2. The issue is still open.
                           //  3. The latest comment's date is more recent than the date of the
                           //     comment to which the user has responded last.
-                          //  4. The issue number isn't already added in the outstanding list.
-                          //     This will happen if the user had opened 2 different issues and
-                          //      we closed one of them as a duplicate of the other.
                           outstanding.push({
                             issue: issueDetails,
                             lastDevComment: comment.comment,
@@ -405,6 +399,13 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
               });
           }})
           .then(() => {
+            //  Make sure we don't list duplicates.
+            outstanding = outstanding.reduce((accum: IOutstandingIssue[], iter: IOutstandingIssue) => {
+              if (accum.find(existing => existing.issue.number === iter.issue.number) === undefined) {
+                accum.push(iter);
+              }
+              return accum;
+            }, []);
             if (outstanding.length > 0) {
               onOpenFeedbackResponder(true);
             }
