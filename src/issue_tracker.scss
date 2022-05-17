@@ -32,15 +32,15 @@
 .issues-responder {
   @extend .btn-embed;
   position: absolute;
-  top: 12px;
-  right: 40px;
+  top: $half-gutter;
+  right: calc(#{$half-gutter} + 2em);
 }
 
 .issues-refresh {
   @extend .btn-embed;
   position: absolute;
-  top: 40px;
-  right: 15px;
+  top: $half-gutter;
+  right: $half-gutter;
 }
 
 .issue-milestone-button {
