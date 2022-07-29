@@ -341,12 +341,12 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
       this.nextState.updating = true;
     }
     this.mLastRefresh = Date.now();
-    queryIssues(this.context.api)
+    return queryIssues(this.context.api)
       .then((res: Array<{ issue_title: string, issue_number: number }>) => {
         const filteredRes = res.filter(issue => !issue.issue_title.startsWith('Response to #'));
         onUpdateIssueList(filteredRes.map(issue => issue.issue_number.toString()));
         const now = Date.now();
-        let outstanding: IOutstandingIssue[] = force ? [] : this.props.outstandingIssues;
+        let outstanding: IOutstandingIssue[] = force ? [] : this.props.outstandingIssues ?? [];
         return Promise.mapSeries(filteredRes, issue => {
           const issueId = issue.issue_number.toString();
           const isIssueClosed = !force
@@ -411,7 +411,7 @@ class IssueList extends ComponentEx<IProps, IIssueListState> {
             }
             onSetOustandingIssues(outstanding);
           })
-          .catch(err => {
+          .tapCatch(err => {
             if (err.message.includes('Status Code: 403') && force) {
               this.context.api.sendNotification({
                 message: t('Sent too many github API requests - try again later'),
