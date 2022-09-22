@@ -516,7 +516,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
       prev + feedbackFiles[key].size, 0);
     if (size + file.size > FeedbackResponderDialog.MAX_ATTACHMENT_SIZE) {
       onShowError('Attachment too big',
-        'Sorry, the combined file size must not exceed 20MB', undefined, false);
+        'Sorry, the combined file size must not exceed 40MB', undefined, false);
     } else {
       this.nextState.feedbackFiles[file.filename] = file;
     }
