@@ -39,6 +39,7 @@ interface IFeedbackFile {
 interface IConnectedProps {
   open: boolean;
   APIKey: string;
+  OAuthCredentials: any;
   outstandingIssues: IOutstandingIssue[];
   issues: { [id: string]: IGithubIssueCache };
 }
@@ -326,14 +327,16 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
   }
 
   private renderFooter(valid: boolean): JSX.Element {
-    const { t, APIKey } = this.props;
+    const { t, APIKey, OAuthCredentials } = this.props;
     const { anonymous, feedbackMessage, sending } = this.state;
 
-    const anon = anonymous || (APIKey === undefined);
+    const loggedIn = (APIKey !== undefined) || (OAuthCredentials !== undefined);
+
+    const anon = anonymous || !loggedIn;
     return (
       <FlexLayout fill={false} type='row' className='feedback-controls'>
         <FlexLayout.Flex>
-          {(APIKey === undefined) ? (
+          {!loggedIn ? (
             <Alert bsStyle='warning'>
               {t('You are not logged in. Please include your username in your message to give us a '
                 + 'chance to reply.')}
@@ -527,7 +530,7 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
   }
 
   private doSubmitFeedback() {
-    const { APIKey, onOpen, onSetOustandingIssues,
+    const { APIKey, OAuthCredentials, onOpen, onSetOustandingIssues,
             onSetUpdateDetails, onShowError, onDismissNotification,
             onShowActivity, outstandingIssues, issues } = this.props;
 
@@ -545,12 +548,14 @@ class FeedbackResponderDialog extends ComponentEx<IProps, IComponentState> {
       files.push(feedbackFiles[key].filePath);
     });
 
+    const loggedIn = (APIKey !== undefined) || (OAuthCredentials !== undefined);
+
     this.context.api.events.emit('submit-feedback',
       title,
       this.systemInfo() + '\n' + feedbackMessage,
       undefined,
       files,
-      (APIKey === undefined),
+      !loggedIn,
       (err: Error) => {
         this.nextState.sending = false;
         if (err !== null) {
@@ -634,6 +639,7 @@ function mapStateToProps(state: any): IConnectedProps {
     issues: util.getSafe(state, ['persistent', 'issues', 'issues'], {}),
     outstandingIssues: util.getSafe(state, ['session', 'issues', 'oustandingIssues'], null),
     APIKey: state.confidential.account.nexus.APIKey,
+    OAuthCredentials: state.confidential.account.nexus.OAuthCredentials,
     open: util.getSafe(state, ['session', 'issues', 'feedbackResponderOpen'], false),
   };
 }
