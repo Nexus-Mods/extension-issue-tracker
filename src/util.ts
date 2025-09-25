@@ -115,8 +115,17 @@ export function getLastDevComment(
 
 export function requestFromApi(apiURL: string): Promise<any> {
   return new Promise((resolve, reject) => {
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(apiURL);
+    } catch (err) {
+      return reject(new Error(`Invalid URL: ${apiURL}`));
+    }
     get({
-      ...url.parse(apiURL),
+      protocol: parsedUrl.protocol,
+      hostname: parsedUrl.hostname,
+      port: parsedUrl.port,
+      path: parsedUrl.pathname + parsedUrl.search,
       headers: { 'User-Agent': 'Vortex' },
     } as any, (res: IncomingMessage) => {
       const { statusCode } = res;
